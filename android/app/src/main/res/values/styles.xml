@@ -1,0 +1,13 @@
+<resources>
+
+    <!-- Launch theme must inherit from MaterialComponents -->
+    <style name="LaunchTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+
+    <!-- Normal theme for Flutter after launch -->
+    <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Customize colors etc. -->
+    </style>
+
+</resources>
