@@ -1,10 +1,8 @@
-import 'package:app_wallet/models/user_model.dart';
-
-import 'package:app_wallet/services/api_services.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'dart:convert';
+import 'package:app_wallet/models/user_model.dart';
+import 'package:app_wallet/services/api_services.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -17,7 +15,7 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // ============================================
-  // LOGIN - Updated to work with new API format
+  // LOGIN
   // ============================================
   Future<bool> login(String email, String password) async {
     _loading = true;
@@ -25,13 +23,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // New API returns Map<String, dynamic> with 'success' and 'user'
       final result = await ApiService.login(email, password);
 
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
-
-        // Save user to local storage
         await _saveUserToLocal(_user!);
 
         _loading = false;
@@ -52,7 +47,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // REGISTER - Updated to work with new API format
+  // REGISTER
   // ============================================
   Future<bool> register(
     String name,
@@ -66,7 +61,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // New API returns Map<String, dynamic> with 'success' and 'user'
       final result = await ApiService.register(
         name,
         email,
@@ -77,10 +71,6 @@ class AuthProvider with ChangeNotifier {
 
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
-
-        // Optionally save user to local storage after registration
-        // await _saveUserToLocal(_user!);
-
         _loading = false;
         notifyListeners();
         return true;
@@ -104,24 +94,26 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _user = null;
     _errorMessage = null;
-
-    // Clear from local storage
     await _clearUserFromLocal();
-
     notifyListeners();
   }
 
   // ============================================
-  // REFRESH USER DATA
+  // REFRESH USER DATA (Optimized)
   // ============================================
   Future<void> refreshUser() async {
     if (_user?.id == null) return;
 
     try {
-      // Use user ID instead of email
       final freshUser = await ApiService.fetchUser(_user!.id!);
 
-      if (freshUser != null) {
+      // Only update if any user field changed
+      if (freshUser != null &&
+          (freshUser.name != _user!.name ||
+              freshUser.balance != _user!.balance ||
+              freshUser.email != _user!.email ||
+              freshUser.phone != _user!.phone ||
+              freshUser.avatar != _user!.avatar)) {
         _user = freshUser;
         await _saveUserToLocal(_user!);
         notifyListeners();
@@ -132,7 +124,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // CHECK AUTH STATUS (Auto-login)
+  // CHECK AUTH STATUS (Optimized)
   // ============================================
   Future<bool> checkAuthStatus() async {
     _loading = true;
@@ -144,15 +136,22 @@ class AuthProvider with ChangeNotifier {
 
       if (userJson != null) {
         final userMap = jsonDecode(userJson);
-        _user = User.fromJson(userMap);
+        final localUser = User.fromJson(userMap);
 
-        // Optional: Refresh user data from server
+        bool needsUpdate = false;
+
+        // Only refresh user if local data is different
+        if (_user == null || _user!.id != localUser.id) {
+          _user = localUser;
+          needsUpdate = true;
+        }
+
         if (_user?.id != null) {
-          await refreshUser();
+          await refreshUser(); // Refresh from server if necessary
         }
 
         _loading = false;
-        notifyListeners();
+        if (needsUpdate) notifyListeners();
         return true;
       }
 
@@ -168,74 +167,53 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // UPDATE USER BALANCE
+  // UPDATE BALANCE & USER
   // ============================================
   void updateBalance(double newBalance) {
     if (_user != null) {
-      _user = User(
-        id: _user!.id,
-        name: _user!.name,
-        email: _user!.email,
-        phone: _user!.phone,
-        avatar: _user!.avatar,
-        balance: newBalance,
-      );
-      _saveUserToLocal(_user!);
-      notifyListeners();
+      final updatedUser = _user!.copyWith(balance: newBalance);
+      _updateUser(updatedUser);
     }
   }
 
-  // ============================================
-  // UPDATE ENTIRE USER
-  // ============================================
   void updateUser(User updatedUser) {
-    _user = updatedUser;
-    _saveUserToLocal(updatedUser);
-    notifyListeners();
+    _updateUser(updatedUser);
   }
 
-  // ============================================
-  // ADD MONEY
-  // ============================================
   void addMoney(double amount) {
-    if (_user != null) {
-      updateBalance(_user!.balance + amount);
-    }
+    if (_user != null) updateBalance(_user!.balance + amount);
   }
 
-  // ============================================
-  // DEDUCT MONEY
-  // ============================================
   void deductMoney(double amount) {
-    if (_user != null && _user!.balance >= amount) {
+    if (_user != null && _user!.balance >= amount)
       updateBalance(_user!.balance - amount);
-    }
   }
 
-  // ============================================
-  // CLEAR ERROR MESSAGE
-  // ============================================
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
   // ============================================
-  // PRIVATE: SAVE USER TO LOCAL STORAGE
+  // PRIVATE HELPERS
   // ============================================
+  void _updateUser(User updatedUser) {
+    if (_user != updatedUser) {
+      _user = updatedUser;
+      _saveUserToLocal(_user!);
+      notifyListeners();
+    }
+  }
+
   Future<void> _saveUserToLocal(User user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userJson = jsonEncode(user.toJson());
-      await prefs.setString('user', userJson);
+      await prefs.setString('user', jsonEncode(user.toJson()));
     } catch (e) {
       print('Save user to local error: $e');
     }
   }
 
-  // ============================================
-  // PRIVATE: CLEAR USER FROM LOCAL STORAGE
-  // ============================================
   Future<void> _clearUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -245,86 +223,3 @@ class AuthProvider with ChangeNotifier {
     }
   }
 }
-
-// ============================================
-// USAGE EXAMPLES
-// ============================================
-/*
-// In Login Screen:
-final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-final success = await authProvider.login(email, password);
-
-if (success) {
-  Navigator.pushReplacementNamed(context, '/home');
-} else {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(authProvider.errorMessage ?? 'Login failed'),
-      backgroundColor: Colors.red,
-    ),
-  );
-}
-
-// In Register Screen:
-final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-final success = await authProvider.register(name, email, password, phone: phone);
-
-if (success) {
-  // User registered successfully, navigate to login
-  Navigator.pushReplacementNamed(context, '/login');
-} else {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(authProvider.errorMessage ?? 'Registration failed'),
-      backgroundColor: Colors.red,
-    ),
-  );
-}
-
-// Show loading indicator:
-Consumer<AuthProvider>(
-  builder: (context, authProvider, child) {
-    if (authProvider.loading) {
-      return CircularProgressIndicator();
-    }
-    return ElevatedButton(
-      onPressed: () => _handleLogin(),
-      child: Text('Login'),
-    );
-  },
-)
-
-// In Main.dart for auto-login:
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
-          return MaterialApp(
-            home: FutureBuilder(
-              future: authProvider.checkAuthStatus(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                
-                if (authProvider.isAuthenticated) {
-                  return HomeScreen();
-                }
-                
-                return LoginScreen();
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-*/

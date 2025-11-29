@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:app_wallet/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:http/http.dart' as http;
 
 class PaymentService {
   // Initialize Stripe - call this in main.dart before runApp()
@@ -12,48 +9,29 @@ class PaymentService {
   }
 
   // ============================================
-  // PAY WITH STRIPE PAYMENT SHEET
+  // DEPOSIT MONEY (STRIPE PAYMENT SHEET)
   // ============================================
-  // IMPORTANT: Amount should be in DOLLARS, not cents
-  // Backend will convert to cents automatically
   static Future<Map<String, dynamic>> payWithPaymentSheet({
-    required double amount, // Amount in dollars (e.g., 100.0 for $100)
-    required int userId, // User ID instead of email
+    required double amount,
+    required int userId,
   }) async {
     try {
-      // Validate amount
       if (amount <= 0) {
         return {'success': false, 'message': 'Amount must be greater than 0'};
       }
 
-      print('Starting payment for \$$amount');
+      print('Starting Stripe payment for \$$amount');
 
-      // 1. Create payment intent on backend
-      final resp = await http.post(
-        Uri.parse('${ApiService.baseUrl}/create-payment-intent'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'amount': amount}), // Send amount in dollars
-      );
-
-      print('Payment Intent Response: ${resp.statusCode}');
-      print('Payment Intent Body: ${resp.body}');
-
-      if (resp.statusCode != 200) {
-        final body = jsonDecode(resp.body);
-        return {
-          'success': false,
-          'message': body['error'] ?? 'Failed to create payment intent',
-        };
-      }
-
-      final body = jsonDecode(resp.body);
-      final clientSecret = body['clientSecret'];
+      // Step 1: Create payment intent from backend
+      final clientSecret = await ApiService.createPaymentIntent(amount);
 
       if (clientSecret == null) {
-        return {'success': false, 'message': 'Invalid payment intent response'};
+        return {'success': false, 'message': 'Failed to create payment intent'};
       }
 
-      // 2. Initialize PaymentSheet
+      print('Payment intent created, initializing payment sheet...');
+
+      // Step 2: Initialize payment sheet
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
@@ -62,20 +40,21 @@ class PaymentService {
         ),
       );
 
-      print('Payment sheet initialized');
+      print('Payment sheet initialized, presenting to user...');
 
-      // 3. Present Payment Sheet to user
+      // Step 3: Present payment sheet to user
       await Stripe.instance.presentPaymentSheet();
 
-      print('Payment completed successfully');
+      print('Payment completed, updating balance...');
 
-      // 4. Update balance in backend after successful payment
+      // Step 4: Update balance in backend after successful payment
       final updateResult = await ApiService.updateBalance(userId, amount);
 
       if (updateResult['success'] == true) {
+        print('Balance updated successfully');
         return {
           'success': true,
-          'message': 'Payment successful! Balance updated.',
+          'message': updateResult['message'] ?? 'Payment successful!',
           'user': updateResult['user'],
         };
       } else {
@@ -87,7 +66,6 @@ class PaymentService {
     } on StripeException catch (e) {
       print('Stripe Error: ${e.error.message}');
 
-      // Handle different Stripe error codes
       String errorMessage = 'Payment failed';
 
       if (e.error.code == FailureCode.Canceled) {
@@ -108,7 +86,7 @@ class PaymentService {
   }
 
   // ============================================
-  // SEND MONEY TO ANOTHER USER
+  // SEND MONEY
   // ============================================
   static Future<Map<String, dynamic>> sendMoney({
     required int senderId,
@@ -173,204 +151,3 @@ class PaymentService {
     return cents / 100.0;
   }
 }
-
-// ============================================
-// EXAMPLE USAGE IN SCREENS
-// ============================================
-/*
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:app_wallet/services/payment_service.dart';
-import 'package:app_wallet/providers/user_provider.dart';
-
-class AddMoneyScreen extends StatefulWidget {
-  @override
-  _AddMoneyScreenState createState() => _AddMoneyScreenState();
-}
-
-class _AddMoneyScreenState extends State<AddMoneyScreen> {
-  final _amountController = TextEditingController();
-  bool _isLoading = false;
-
-  Future<void> _handleAddMoney() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final user = userProvider.user;
-
-    if (user?.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not found'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    final amount = PaymentService.parseAmount(_amountController.text);
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid amount'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    final result = await PaymentService.payWithPaymentSheet(
-      amount: amount,
-      userId: user!.id!,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (result['success'] == true) {
-      // Update user in provider
-      if (result['user'] != null) {
-        userProvider.updateUser(result['user']);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Add Money')),
-      body: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount (USD)',
-                prefixText: '\$ ',
-              ),
-            ),
-            SizedBox(height: 24),
-            _isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _handleAddMoney,
-                    child: Text('Add Money'),
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Send Money Example
-class SendMoneyScreen extends StatefulWidget {
-  @override
-  _SendMoneyScreenState createState() => _SendMoneyScreenState();
-}
-
-class _SendMoneyScreenState extends State<SendMoneyScreen> {
-  final _phoneController = TextEditingController();
-  final _amountController = TextEditingController();
-  bool _isLoading = false;
-
-  Future<void> _handleSendMoney() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final user = userProvider.user;
-
-    if (user?.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not found'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    final amount = PaymentService.parseAmount(_amountController.text);
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid amount'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    final result = await PaymentService.sendMoney(
-      senderId: user!.id!,
-      receiverPhone: _phoneController.text.trim(),
-      amount: amount,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (result['success'] == true) {
-      // Deduct money from user balance
-      userProvider.deductMoney(amount);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Send Money')),
-      body: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Receiver Phone Number',
-              ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount (USD)',
-                prefixText: '\$ ',
-              ),
-            ),
-            SizedBox(height: 24),
-            _isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _handleSendMoney,
-                    child: Text('Send Money'),
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-*/
