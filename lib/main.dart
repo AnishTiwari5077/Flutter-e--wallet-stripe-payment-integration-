@@ -22,7 +22,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class MyApp extends StatelessWidget {
           inputDecorationTheme: InputDecorationTheme(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
-            fillColor: Colors.grey[50],
+            fillColor: Colors.white,
           ),
         ),
         home: const AuthWrapper(),
@@ -80,52 +80,69 @@ class MyApp extends StatelessWidget {
 }
 
 // ============================================
-// AUTH WRAPPER - Checks if user is logged in
+// AUTH WRAPPER (FIXED)
 // ============================================
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Kicks off the asynchronous check only ONCE in initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // We use read() here because we are only initiating the process;
+      // we don't want the build method to be sensitive to the start of loading.
+      context.read<AuthProvider>().checkAuthStatus();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        return FutureBuilder<bool>(
-          future: authProvider.checkAuthStatus(),
-          builder: (context, snapshot) {
-            // Show loading screen while checking auth
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                backgroundColor: Color(0xFF080814),
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Loading...', style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                ),
-              );
-            }
+    // LISTEN to the AuthProvider for its state changes.
+    final authProvider = context.watch<AuthProvider>();
 
-            // If user is authenticated, go to dashboard
-            if (authProvider.isAuthenticated && authProvider.user != null) {
-              // Also sync with UserProvider
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                Provider.of<UserProvider>(
-                  context,
-                  listen: false,
-                ).setUser(authProvider.user!);
-              });
-              return const DashboardScreen();
-            }
+    // 1. Show Loading Screen
+    if (authProvider.loading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF080814),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Checking session...',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-            // Otherwise, show login screen
-            return const LoginScreen();
-          },
-        );
-      },
-    );
+    // 2. User is Authenticated
+    if (authProvider.isAuthenticated && authProvider.user != null) {
+      // 💡 THE FIX: DEFER the cross-provider state change to the next frame.
+      // This prevents the UserProvider's notifyListeners() from running
+      // while AuthWrapper is still in the process of building.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          // Safely update the UserProvider after the build cycle completes.
+          context.read<UserProvider>().setUser(authProvider.user!);
+        }
+      });
+
+      // Safely return the DashboardScreen.
+      return const DashboardScreen();
+    }
+
+    // 3. User is NOT Authenticated
+    return const LoginScreen();
   }
 }

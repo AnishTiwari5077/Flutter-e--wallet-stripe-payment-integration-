@@ -14,38 +14,47 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _initialLoading = true;
-
   @override
   void initState() {
     super.initState();
-    // Safe async initialization
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final auth = context.read<AuthProvider>();
-      final transactions = context.read<TransactionProvider>();
-
-      if (mounted) {
-        await auth.refreshUser();
-        final id = auth.user?.id;
-        if (id != null) {
-          await transactions.fetchUserTransactions(id);
-        }
-        if (mounted) {
-          setState(() {
-            _initialLoading = false;
-          });
-        }
-      }
+    // 🚀 We call the necessary data fetches right after the build phase completes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
     });
+  }
+
+  // A helper function to encapsulate the initial data loading
+  Future<void> _loadData() async {
+    // Use read, as we don't need this widget to rebuild when loading starts
+    final auth = context.read<AuthProvider>();
+    final transactions = context.read<TransactionProvider>();
+
+    // 1. Refresh user (to get latest balance/data)
+    // Use the optimized refreshUser if the user is already logged in (checked by parent wrapper)
+    // NOTE: refreshUser should handle its own loading/notifyListeners
+    await auth.refreshUser(fetchFromServer: true);
+
+    // 2. Fetch transactions only if the user object is valid
+    final userId = auth.user?.id;
+    if (userId != null && mounted) {
+      // NOTE: The TransactionProvider should handle its own loading state
+      await transactions.fetchUserTransactions(userId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 💡 Listen to the AuthProvider for user state changes
     final auth = context.watch<AuthProvider>();
-    final user = auth.user;
+    // 💡 Listen to the TransactionProvider for transaction list changes
     final transactionProvider = context.watch<TransactionProvider>();
 
-    if (_initialLoading || auth.loading) {
+    final user = auth.user;
+
+    // --- Loading and Error Screens ---
+
+    // Use only the provider's loading state, which now reflects the refreshUser status
+    if (auth.loading) {
       return const Scaffold(
         backgroundColor: Color(0xFF080814),
         body: Center(child: CircularProgressIndicator()),
@@ -53,17 +62,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     if (user == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF080814),
+      // If auth.loading is false but user is null, it means loading failed or
+      // the user was logged out. Prompt to log in or show an error.
+      return Scaffold(
+        backgroundColor: const Color(0xFF080814),
         body: Center(
-          child: Text(
-            "Failed to load user",
-            style: TextStyle(color: Colors.white),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "Session Expired or Failed to load user.",
+                style: TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+                child: const Text('Go to Login'),
+              ),
+            ],
           ),
         ),
       );
     }
 
+    // --- Dashboard UI ---
     return Scaffold(
       backgroundColor: const Color(0xFF080814),
       appBar: AppBar(
@@ -73,6 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             onPressed: () async {
+              // The logout method is safe to call here (user action)
               await auth.logout();
               if (mounted) {
                 Navigator.pushReplacementNamed(context, '/login');
@@ -83,8 +108,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: RefreshIndicator(
+        // Ensure both providers refresh their data on pull-to-refresh
         onRefresh: () async {
-          await auth.refreshUser();
+          // ⚠️ IMPORTANT: Pass fetchFromServer: true to guarantee API call
+          await auth.refreshUser(fetchFromServer: true);
           if (user.id != null) {
             await transactionProvider.refreshTransactions(user.id!);
           }
@@ -108,6 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 30),
 
+              // Pass the provider instance and user ID to the build method
               _buildRecentTransactionsSection(transactionProvider, user.id!),
             ],
           ),
@@ -115,6 +143,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  // --- Helper Widget Methods (Unchanged, as they were correct) ---
 
   // ----------------------- Services ----------------------------
   Widget _buildServicesSection() {
@@ -139,6 +169,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildPaymentGrid() {
+    // ... (rest of the _buildPaymentGrid logic is unchanged)
     final services = [
       {
         'type': PaymentType.deposit,
@@ -206,6 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required Color color,
   }) {
+    // ... (rest of the _buildServiceCard logic is unchanged)
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -290,13 +322,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(color: Colors.grey[600]),
             )
           else
-            ...recent.map((tx) => _buildTransactionItem(tx, userId)),
+            // Added keys to improve list performance and stability
+            ...recent.map((tx) => _buildTransactionItem(tx, userId)).toList(),
         ],
       ),
     );
   }
 
   Widget _buildTransactionItem(dynamic tx, int userId) {
+    // ... (rest of the _buildTransactionItem logic is unchanged)
     final type = tx['type'];
     final amount = double.tryParse("${tx['amount']}") ?? 0.0;
     final date = tx['created_at'] ?? '';

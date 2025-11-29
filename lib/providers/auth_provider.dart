@@ -9,14 +9,19 @@ class AuthProvider with ChangeNotifier {
   bool _loading = false;
   String? _errorMessage;
 
+  // ============================================
+  // Getters
+  // ============================================
   User? get user => _user;
   bool get loading => _loading;
   bool get isAuthenticated => _user != null;
   String? get errorMessage => _errorMessage;
 
   // ============================================
-  // LOGIN
+  // Core Authentication Methods
   // ============================================
+
+  /// Logs in the user and saves their data locally.
   Future<bool> login(String email, String password) async {
     _loading = true;
     _errorMessage = null;
@@ -28,27 +33,21 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
         await _saveUserToLocal(_user!);
-
-        _loading = false;
-        notifyListeners();
         return true;
       } else {
         _errorMessage = result['message'] ?? 'Login failed';
-        _loading = false;
-        notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Connection error: $e';
+      return false;
+    } finally {
       _loading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // ============================================
-  // REGISTER
-  // ============================================
+  /// Registers a new user.
   Future<bool> register(
     String name,
     String email,
@@ -71,26 +70,22 @@ class AuthProvider with ChangeNotifier {
 
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
-        _loading = false;
-        notifyListeners();
+        await _saveUserToLocal(_user!);
         return true;
       } else {
         _errorMessage = result['message'] ?? 'Registration failed';
-        _loading = false;
-        notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Connection error: $e';
+      return false;
+    } finally {
       _loading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // ============================================
-  // LOGOUT
-  // ============================================
+  /// Clears user data and local storage, triggering a rebuild to a logged-out state.
   Future<void> logout() async {
     _user = null;
     _errorMessage = null;
@@ -99,24 +94,74 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // REFRESH USER DATA (Optimized)
+  // Auth Status & Data Management
   // ============================================
-  Future<void> refreshUser() async {
-    if (_user?.id == null) return;
+
+  /// Checks local storage for a user and attempts to refresh data from the server.
+  Future<bool> checkAuthStatus() async {
+    _loading = true;
+    notifyListeners(); // Show loading state
 
     try {
-      final freshUser = await ApiService.fetchUser(_user!.id!);
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
 
-      // Only update if any user field changed
-      if (freshUser != null &&
-          (freshUser.name != _user!.name ||
-              freshUser.balance != _user!.balance ||
-              freshUser.email != _user!.email ||
-              freshUser.phone != _user!.phone ||
-              freshUser.avatar != _user!.avatar)) {
+      if (userJson != null) {
+        try {
+          final userMap = jsonDecode(userJson);
+          final localUser = User.fromJson(userMap);
+
+          // 1. Set user from local storage
+          _user = localUser;
+
+          // 2. Refresh from server only if we have a valid ID
+          if (_user?.id != null) {
+            await refreshUser(fetchFromServer: true);
+          }
+
+          // Return true if we successfully loaded any user data
+          return true;
+        } catch (e) {
+          // ⚠️ CATCHES _TypeError from corrupted local JSON data
+          print(
+            'Error parsing local user data. Clearing local storage. Error: $e',
+          );
+          await _clearUserFromLocal();
+          _user = null;
+        }
+      }
+
+      return false; // No user data found locally or data was corrupt
+    } catch (e) {
+      print('Check auth status error: $e');
+      _user = null;
+      return false;
+    } finally {
+      // ✅ GUARANTEED STATE RESET: Always stops the loading indicator
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches the latest user data from the server.
+  Future<void> refreshUser({bool fetchFromServer = false}) async {
+    // ⚠️ NULL SAFETY: Safely extract ID before using it
+    final userId = _user?.id;
+    if (userId == null) return;
+
+    if (!fetchFromServer) {
+      return;
+    }
+
+    try {
+      // ⚠️ Use the safely extracted ID
+      final freshUser = await ApiService.fetchUser(userId);
+
+      // Only update if fresh data is received AND it's actually different
+      if (freshUser != null && freshUser != _user) {
         _user = freshUser;
         await _saveUserToLocal(_user!);
-        notifyListeners();
+        notifyListeners(); // Notify if user data changed
       }
     } catch (e) {
       print('Refresh user error: $e');
@@ -124,51 +169,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // CHECK AUTH STATUS (Optimized)
+  // State Mutators
   // ============================================
-  Future<bool> checkAuthStatus() async {
-    _loading = true;
-    notifyListeners();
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString('user');
-
-      if (userJson != null) {
-        final userMap = jsonDecode(userJson);
-        final localUser = User.fromJson(userMap);
-
-        bool needsUpdate = false;
-
-        // Only refresh user if local data is different
-        if (_user == null || _user!.id != localUser.id) {
-          _user = localUser;
-          needsUpdate = true;
-        }
-
-        if (_user?.id != null) {
-          await refreshUser(); // Refresh from server if necessary
-        }
-
-        _loading = false;
-        if (needsUpdate) notifyListeners();
-        return true;
-      }
-
-      _loading = false;
-      notifyListeners();
-      return false;
-    } catch (e) {
-      print('Check auth status error: $e');
-      _loading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // ============================================
-  // UPDATE BALANCE & USER
-  // ============================================
+  /// Updates the user's balance and saves the change.
   void updateBalance(double newBalance) {
     if (_user != null) {
       final updatedUser = _user!.copyWith(balance: newBalance);
@@ -176,27 +180,34 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Replaces the current user object with a new one.
   void updateUser(User updatedUser) {
     _updateUser(updatedUser);
   }
 
+  /// Adds an amount to the user's balance.
   void addMoney(double amount) {
     if (_user != null) updateBalance(_user!.balance + amount);
   }
 
+  /// Deducts an amount from the user's balance.
   void deductMoney(double amount) {
-    if (_user != null && _user!.balance >= amount)
+    if (_user != null && _user!.balance >= amount) {
       updateBalance(_user!.balance - amount);
+    }
   }
 
+  /// Clears the last error message.
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
   // ============================================
-  // PRIVATE HELPERS
+  // Private Helpers (Separating concerns)
   // ============================================
+
+  /// Internal method to update the user object, save it, and notify.
   void _updateUser(User updatedUser) {
     if (_user != updatedUser) {
       _user = updatedUser;
@@ -205,6 +216,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Saves the current user object to SharedPreferences.
   Future<void> _saveUserToLocal(User user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -214,6 +226,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Clears the user object from SharedPreferences.
   Future<void> _clearUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
