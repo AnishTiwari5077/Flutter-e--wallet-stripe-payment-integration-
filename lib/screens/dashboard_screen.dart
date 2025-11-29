@@ -1,13 +1,14 @@
-import 'package:app_wallet/widgets/neo_widget.dart';
+import 'package:app_wallet/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-
-import 'send_money_screen.dart';
-import 'deposit_screen.dart';
+import 'package:app_wallet/providers/auth_provider.dart';
+import 'package:app_wallet/widgets/neo_widget.dart';
+import 'package:app_wallet/screens/send_money_screen.dart';
+import 'package:app_wallet/screens/deposit_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -16,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // fetch latest user data
+    // Fetch latest user data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AuthProvider>(context, listen: false).refreshUser();
     });
@@ -26,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
+
     return Scaffold(
       backgroundColor: const Color(0xFF080814),
       appBar: AppBar(
@@ -33,7 +35,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () => auth.logout(),
+            onPressed: () async {
+              await auth.logout();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
+            },
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -58,13 +65,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const DepositScreen(),
+                              builder: (_) => const LoginScreen(),
                             ),
                           ),
                           icon: const Icon(Icons.add_circle_outline),
                           label: const Text('Deposit'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
@@ -81,13 +89,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           label: const Text('Send'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.teal,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // ... add recent transactions, etc.
+                const SizedBox(height: 24),
+                // Recent Transactions Section
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Recent Transactions',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'No transactions yet',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
     );

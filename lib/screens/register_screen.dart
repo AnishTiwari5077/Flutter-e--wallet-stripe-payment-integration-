@@ -21,6 +21,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0B0B15),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0B0B15),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Register',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),

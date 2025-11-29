@@ -20,25 +20,28 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     setState(() => loading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final senderId = auth.user?.id ?? 0;
-    final amountCents = (double.tryParse(amount.text.trim()) ?? 0) * 100;
+    final amountValue = double.tryParse(amount.text.trim()) ?? 0;
 
-    final ok = await ApiService.sendMoney(
+    // Call ApiService
+    final result = await ApiService.sendMoney(
       senderId,
       phone.text.trim(),
-      amountCents.toInt(),
+      amountValue,
     );
+
     setState(() => loading = false);
 
-    if (ok) {
+    if (result['success'] == true) {
+      // Refresh user data
       await auth.refreshUser();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Sent successfully')));
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Send failed')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Send failed')),
+      );
     }
   }
 

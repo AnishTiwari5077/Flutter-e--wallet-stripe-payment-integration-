@@ -1,6 +1,3 @@
-import 'package:app_wallet/screens/dashboard_screen.dart';
-import 'package:app_wallet/screens/deposit_screen.dart';
-import 'package:app_wallet/screens/send_money_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
@@ -38,7 +35,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.purple,
           useMaterial3: true,
         ),
-        home: DepositScreen(),
+        home: LoginScreen(),
       ),
     );
   }
