@@ -17,43 +17,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // 🚀 We call the necessary data fetches right after the build phase completes.
+    // Fetch latest data after build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
   }
 
-  // A helper function to encapsulate the initial data loading
   Future<void> _loadData() async {
-    // Use read, as we don't need this widget to rebuild when loading starts
+    if (!mounted) return;
+
     final auth = context.read<AuthProvider>();
     final transactions = context.read<TransactionProvider>();
 
-    // 1. Refresh user (to get latest balance/data)
-    // Use the optimized refreshUser if the user is already logged in (checked by parent wrapper)
-    // NOTE: refreshUser should handle its own loading/notifyListeners
-    await auth.refreshUser(fetchFromServer: true);
+    // Refresh user data from server
+    await auth.refreshUser();
 
-    // 2. Fetch transactions only if the user object is valid
-    final userId = auth.user?.id;
-    if (userId != null && mounted) {
-      // NOTE: The TransactionProvider should handle its own loading state
-      await transactions.fetchUserTransactions(userId);
+    // Fetch transactions if user exists
+    if (auth.user?.id != null && mounted) {
+      await transactions.fetchUserTransactions(auth.user!.id!);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 💡 Listen to the AuthProvider for user state changes
     final auth = context.watch<AuthProvider>();
-    // 💡 Listen to the TransactionProvider for transaction list changes
     final transactionProvider = context.watch<TransactionProvider>();
-
     final user = auth.user;
 
-    // --- Loading and Error Screens ---
-
-    // Use only the provider's loading state, which now reflects the refreshUser status
+    // Loading State
     if (auth.loading) {
       return const Scaffold(
         backgroundColor: Color(0xFF080814),
@@ -61,24 +52,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
+    // No User State
     if (user == null) {
-      // If auth.loading is false but user is null, it means loading failed or
-      // the user was logged out. Prompt to log in or show an error.
       return Scaffold(
         backgroundColor: const Color(0xFF080814),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                "Session Expired or Failed to load user.",
-                style: TextStyle(color: Colors.white),
-              ),
+              const Icon(Icons.error_outline, color: Colors.red, size: 60),
               const SizedBox(height: 16),
+              const Text(
+                'Session Expired',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please login again',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pushReplacementNamed(context, '/login');
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purpleAccent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
                 child: const Text('Go to Login'),
               ),
             ],
@@ -87,31 +95,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // --- Dashboard UI ---
+    // Main Dashboard UI
     return Scaffold(
       backgroundColor: const Color(0xFF080814),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('E-Wallet'),
+        title: const Text(
+          'E-Wallet',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             onPressed: () async {
-              // The logout method is safe to call here (user action)
               await auth.logout();
               if (mounted) {
                 Navigator.pushReplacementNamed(context, '/login');
               }
             },
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
           ),
         ],
       ),
       body: RefreshIndicator(
-        // Ensure both providers refresh their data on pull-to-refresh
         onRefresh: () async {
-          // ⚠️ IMPORTANT: Pass fetchFromServer: true to guarantee API call
-          await auth.refreshUser(fetchFromServer: true);
+          await auth.refreshUser();
           if (user.id != null) {
             await transactionProvider.refreshTransactions(user.id!);
           }
@@ -131,11 +140,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 30),
 
+              // Services Section
               _buildServicesSection(),
 
               const SizedBox(height: 30),
 
-              // Pass the provider instance and user ID to the build method
+              // Recent Transactions Section
               _buildRecentTransactionsSection(transactionProvider, user.id!),
             ],
           ),
@@ -144,9 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- Helper Widget Methods (Unchanged, as they were correct) ---
-
-  // ----------------------- Services ----------------------------
+  // ============================================
+  // SERVICES SECTION
+  // ============================================
   Widget _buildServicesSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -169,7 +179,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildPaymentGrid() {
-    // ... (rest of the _buildPaymentGrid logic is unchanged)
     final services = [
       {
         'type': PaymentType.deposit,
@@ -237,14 +246,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required Color color,
   }) {
-    // ... (rest of the _buildServiceCard logic is unchanged)
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // Navigate to payment screen and wait for result
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => PaymentScreen(paymentType: type)),
         );
+
+        // If payment was successful, refresh data
+        if (result == true && mounted) {
+          final auth = context.read<AuthProvider>();
+          final transactions = context.read<TransactionProvider>();
+
+          // Refresh user balance
+          await auth.refreshUser();
+
+          // Refresh transactions
+          if (auth.user?.id != null) {
+            await transactions.refreshTransactions(auth.user!.id!);
+          }
+
+          // Show success feedback
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Transaction completed successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -283,7 +317,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ----------------------- Recent Transactions ----------------------------
+  // ============================================
+  // RECENT TRANSACTIONS SECTION
+  // ============================================
   Widget _buildRecentTransactionsSection(
     TransactionProvider provider,
     int userId,
@@ -305,34 +341,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Recent Transactions",
+                'Recent Transactions',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              TextButton(onPressed: () {}, child: const Text("See All")),
+              TextButton(
+                onPressed: () {
+                  // TODO: Navigate to all transactions screen
+                },
+                child: const Text(
+                  'See All',
+                  style: TextStyle(color: Colors.purpleAccent),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           if (recent.isEmpty)
-            Text(
-              "No transactions yet",
-              style: TextStyle(color: Colors.grey[600]),
+            Container(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(Icons.receipt_long, size: 60, color: Colors.grey[700]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No transactions yet',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start by adding money to your wallet',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                  ),
+                ],
+              ),
             )
           else
-            // Added keys to improve list performance and stability
-            ...recent.map((tx) => _buildTransactionItem(tx, userId)).toList(),
+            ...recent.map((tx) => _buildTransactionItem(tx, userId)),
         ],
       ),
     );
   }
 
   Widget _buildTransactionItem(dynamic tx, int userId) {
-    // ... (rest of the _buildTransactionItem logic is unchanged)
-    final type = tx['type'];
-    final amount = double.tryParse("${tx['amount']}") ?? 0.0;
+    final type = tx['type'] ?? '';
+    final amount = double.tryParse('${tx['amount']}') ?? 0.0;
     final date = tx['created_at'] ?? '';
     final isSent = tx['sender_id'] == userId;
 
@@ -355,6 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Container(
+      key: ValueKey(tx['transaction_id']), // Add key for better performance
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -384,6 +441,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(

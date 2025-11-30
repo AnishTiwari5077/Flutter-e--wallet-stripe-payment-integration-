@@ -1,8 +1,8 @@
 import 'dart:convert';
+import 'package:app_wallet/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_wallet/models/user_model.dart';
-import 'package:app_wallet/services/api_services.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -18,10 +18,8 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // ============================================
-  // Core Authentication Methods
+  // LOGIN
   // ============================================
-
-  /// Logs in the user and saves their data locally.
   Future<bool> login(String email, String password) async {
     _loading = true;
     _errorMessage = null;
@@ -33,21 +31,26 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
         await _saveUserToLocal(_user!);
+        _loading = false;
+        notifyListeners();
         return true;
       } else {
         _errorMessage = result['message'] ?? 'Login failed';
+        _loading = false;
+        notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Connection error: $e';
-      return false;
-    } finally {
       _loading = false;
       notifyListeners();
+      return false;
     }
   }
 
-  /// Registers a new user.
+  // ============================================
+  // REGISTER
+  // ============================================
   Future<bool> register(
     String name,
     String email,
@@ -71,21 +74,26 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
         await _saveUserToLocal(_user!);
+        _loading = false;
+        notifyListeners();
         return true;
       } else {
         _errorMessage = result['message'] ?? 'Registration failed';
+        _loading = false;
+        notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Connection error: $e';
-      return false;
-    } finally {
       _loading = false;
       notifyListeners();
+      return false;
     }
   }
 
-  /// Clears user data and local storage, triggering a rebuild to a logged-out state.
+  // ============================================
+  // LOGOUT
+  // ============================================
   Future<void> logout() async {
     _user = null;
     _errorMessage = null;
@@ -94,13 +102,11 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // Auth Status & Data Management
+  // CHECK AUTH STATUS (Auto-login)
   // ============================================
-
-  /// Checks local storage for a user and attempts to refresh data from the server.
   Future<bool> checkAuthStatus() async {
     _loading = true;
-    notifyListeners(); // Show loading state
+    notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -109,59 +115,51 @@ class AuthProvider with ChangeNotifier {
       if (userJson != null) {
         try {
           final userMap = jsonDecode(userJson);
-          final localUser = User.fromJson(userMap);
+          _user = User.fromJson(userMap);
 
-          // 1. Set user from local storage
-          _user = localUser;
-
-          // 2. Refresh from server only if we have a valid ID
+          // Optionally refresh from server
           if (_user?.id != null) {
-            await refreshUser(fetchFromServer: true);
+            final freshUser = await ApiService.fetchUser(_user!.id!);
+            if (freshUser != null) {
+              _user = freshUser;
+              await _saveUserToLocal(_user!);
+            }
           }
 
-          // Return true if we successfully loaded any user data
+          _loading = false;
+          notifyListeners();
           return true;
         } catch (e) {
-          // ⚠️ CATCHES _TypeError from corrupted local JSON data
-          print(
-            'Error parsing local user data. Clearing local storage. Error: $e',
-          );
+          print('Error parsing local user data: $e');
           await _clearUserFromLocal();
           _user = null;
         }
       }
 
-      return false; // No user data found locally or data was corrupt
-    } catch (e) {
-      print('Check auth status error: $e');
-      _user = null;
-      return false;
-    } finally {
-      // ✅ GUARANTEED STATE RESET: Always stops the loading indicator
       _loading = false;
       notifyListeners();
+      return false;
+    } catch (e) {
+      print('Check auth status error: $e');
+      _loading = false;
+      notifyListeners();
+      return false;
     }
   }
 
-  /// Fetches the latest user data from the server.
-  Future<void> refreshUser({bool fetchFromServer = false}) async {
-    // ⚠️ NULL SAFETY: Safely extract ID before using it
-    final userId = _user?.id;
-    if (userId == null) return;
-
-    if (!fetchFromServer) {
-      return;
-    }
+  // ============================================
+  // REFRESH USER DATA FROM SERVER
+  // ============================================
+  Future<void> refreshUser() async {
+    if (_user?.id == null) return;
 
     try {
-      // ⚠️ Use the safely extracted ID
-      final freshUser = await ApiService.fetchUser(userId);
+      final freshUser = await ApiService.fetchUser(_user!.id!);
 
-      // Only update if fresh data is received AND it's actually different
-      if (freshUser != null && freshUser != _user) {
+      if (freshUser != null) {
         _user = freshUser;
         await _saveUserToLocal(_user!);
-        notifyListeners(); // Notify if user data changed
+        notifyListeners();
       }
     } catch (e) {
       print('Refresh user error: $e');
@@ -169,46 +167,20 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // State Mutators
+  // UPDATE USER BALANCE
   // ============================================
-
-  /// Updates the user's balance and saves the change.
   void updateBalance(double newBalance) {
     if (_user != null) {
-      final updatedUser = _user!.copyWith(balance: newBalance);
-      _updateUser(updatedUser);
+      _user = _user!.copyWith(balance: newBalance);
+      _saveUserToLocal(_user!);
+      notifyListeners();
     }
   }
 
-  /// Replaces the current user object with a new one.
+  // ============================================
+  // UPDATE ENTIRE USER
+  // ============================================
   void updateUser(User updatedUser) {
-    _updateUser(updatedUser);
-  }
-
-  /// Adds an amount to the user's balance.
-  void addMoney(double amount) {
-    if (_user != null) updateBalance(_user!.balance + amount);
-  }
-
-  /// Deducts an amount from the user's balance.
-  void deductMoney(double amount) {
-    if (_user != null && _user!.balance >= amount) {
-      updateBalance(_user!.balance - amount);
-    }
-  }
-
-  /// Clears the last error message.
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  // ============================================
-  // Private Helpers (Separating concerns)
-  // ============================================
-
-  /// Internal method to update the user object, save it, and notify.
-  void _updateUser(User updatedUser) {
     if (_user != updatedUser) {
       _user = updatedUser;
       _saveUserToLocal(_user!);
@@ -216,17 +188,48 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Saves the current user object to SharedPreferences.
+  // ============================================
+  // ADD MONEY
+  // ============================================
+  void addMoney(double amount) {
+    if (_user != null) {
+      updateBalance(_user!.balance + amount);
+    }
+  }
+
+  // ============================================
+  // DEDUCT MONEY
+  // ============================================
+  void deductMoney(double amount) {
+    if (_user != null && _user!.balance >= amount) {
+      updateBalance(_user!.balance - amount);
+    }
+  }
+
+  // ============================================
+  // CLEAR ERROR MESSAGE
+  // ============================================
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // ============================================
+  // PRIVATE: SAVE USER TO LOCAL STORAGE
+  // ============================================
   Future<void> _saveUserToLocal(User user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user', jsonEncode(user.toJson()));
+      final userJson = jsonEncode(user.toJson());
+      await prefs.setString('user', userJson);
     } catch (e) {
       print('Save user to local error: $e');
     }
   }
 
-  /// Clears the user object from SharedPreferences.
+  // ============================================
+  // PRIVATE: CLEAR USER FROM LOCAL STORAGE
+  // ============================================
   Future<void> _clearUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();

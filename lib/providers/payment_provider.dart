@@ -24,7 +24,7 @@ class PaymentProvider with ChangeNotifier {
   // ============================================
   // DEPOSIT MONEY (STRIPE)
   // ============================================
-  Future<bool> depositMoney({
+  Future<Map<String, dynamic>> depositMoney({
     required int userId,
     required double amount,
   }) async {
@@ -42,17 +42,22 @@ class PaymentProvider with ChangeNotifier {
       if (result['success'] == true) {
         _successMessage = result['message'] ?? 'Deposit successful!';
         notifyListeners();
-        return true;
+        // Return user object to update in AuthProvider
+        return {
+          'success': true,
+          'message': _successMessage,
+          'user': result['user'], // Pass updated user
+        };
       } else {
         _errorMessage = result['message'] ?? 'Deposit failed';
         notifyListeners();
-        return false;
+        return {'success': false, 'message': _errorMessage};
       }
     } catch (e) {
       _setLoading(false);
       _errorMessage = 'Error: $e';
       notifyListeners();
-      return false;
+      return {'success': false, 'message': _errorMessage};
     }
   }
 

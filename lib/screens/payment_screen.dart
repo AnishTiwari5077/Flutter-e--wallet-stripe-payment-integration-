@@ -52,14 +52,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     bool success = false;
+    dynamic result;
 
     switch (widget.paymentType) {
       case PaymentType.deposit:
-        success = await paymentProvider.depositMoney(
+        // Deposit returns Map with user object
+        result = await paymentProvider.depositMoney(
           userId: user.id!,
           amount: amount,
         );
-        if (success) await auth.refreshUser();
+        success = result['success'] == true;
+
+        // Update user with fresh data from backend
+        if (success && result['user'] != null) {
+          auth.updateUser(result['user']);
+        }
         break;
 
       case PaymentType.sendMoney:
@@ -81,20 +88,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
           receiverPhone: _phoneController.text.trim(),
           amount: amount,
         );
-        if (success) auth.deductMoney(amount);
+        // Deduct money immediately for instant UI feedback
+        if (success) {
+          auth.deductMoney(amount);
+          // Then refresh from backend to ensure accuracy
+          await auth.refreshUser();
+        }
         break;
 
       case PaymentType.bankTransfer:
+        if (user.balance < amount) {
+          _showMessage('Insufficient balance', isError: true);
+          return;
+        }
         success = await paymentProvider.bankTransfer(
           userId: user.id!,
           accountNumber: _accountController.text.trim(),
           bankName: _nameController.text.trim(),
           amount: amount,
         );
-        if (success) auth.deductMoney(amount);
+        if (success) {
+          auth.deductMoney(amount);
+          await auth.refreshUser();
+        }
         break;
 
       case PaymentType.collegePayment:
+        if (user.balance < amount) {
+          _showMessage('Insufficient balance', isError: true);
+          return;
+        }
         success = await paymentProvider.collegePayment(
           userId: user.id!,
           studentId: _accountController.text.trim(),
@@ -102,49 +125,82 @@ class _PaymentScreenState extends State<PaymentScreen> {
           amount: amount,
           semester: _extraController.text.trim(),
         );
-        if (success) auth.deductMoney(amount);
+        if (success) {
+          auth.deductMoney(amount);
+          await auth.refreshUser();
+        }
         break;
 
       case PaymentType.topup:
+        if (user.balance < amount) {
+          _showMessage('Insufficient balance', isError: true);
+          return;
+        }
         success = await paymentProvider.mobileTopup(
           userId: user.id!,
           phoneNumber: _phoneController.text.trim(),
           operator: _nameController.text.trim(),
           amount: amount,
         );
-        if (success) auth.deductMoney(amount);
+        if (success) {
+          auth.deductMoney(amount);
+          await auth.refreshUser();
+        }
         break;
 
       case PaymentType.billPayment:
+        if (user.balance < amount) {
+          _showMessage('Insufficient balance', isError: true);
+          return;
+        }
         success = await paymentProvider.billPayment(
           userId: user.id!,
           billType: _nameController.text.trim(),
           accountNumber: _accountController.text.trim(),
           amount: amount,
         );
-        if (success) auth.deductMoney(amount);
+        if (success) {
+          auth.deductMoney(amount);
+          await auth.refreshUser();
+        }
         break;
 
       case PaymentType.shopping:
+        if (user.balance < amount) {
+          _showMessage('Insufficient balance', isError: true);
+          return;
+        }
         success = await paymentProvider.shoppingPayment(
           userId: user.id!,
           merchantName: _nameController.text.trim(),
           amount: amount,
           items: [],
         );
-        if (success) auth.deductMoney(amount);
+        if (success) {
+          auth.deductMoney(amount);
+          await auth.refreshUser();
+        }
         break;
     }
 
     if (mounted) {
       if (success) {
-        _showMessage(
-          paymentProvider.successMessage ?? 'Success!',
-          isError: false,
-        );
-        Navigator.pop(context);
+        // Get message from result or provider
+        final message = widget.paymentType == PaymentType.deposit
+            ? result['message']
+            : paymentProvider.successMessage;
+
+        _showMessage(message ?? 'Success!', isError: false);
+
+        // Return true to signal success to dashboard
+        Navigator.pop(context, true);
       } else {
-        _showMessage(paymentProvider.errorMessage ?? 'Failed', isError: true);
+        // Get error message from result or provider
+        final message = widget.paymentType == PaymentType.deposit
+            ? result['message']
+            : paymentProvider.errorMessage;
+
+        _showMessage(message ?? 'Failed', isError: true);
       }
     }
   }
@@ -154,6 +210,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: isError ? 3 : 2),
       ),
     );
   }
@@ -168,7 +225,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(paymentProvider.getPaymentTypeName(widget.paymentType)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          paymentProvider.getPaymentTypeName(widget.paymentType),
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -178,7 +242,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              // Icon and Title
+
+              // Icon and Title Card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -210,10 +275,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         color: Colors.white,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     if (auth.user != null)
-                      Text(
-                        'Balance: \$${auth.user!.balance.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Balance: \$${auth.user!.balance.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -227,7 +307,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
               // Submit Button
               SizedBox(
-                height: 50,
+                height: 54,
                 child: ElevatedButton(
                   onPressed: paymentProvider.isLoading ? null : _handlePayment,
                   style: ElevatedButton.styleFrom(
@@ -235,17 +315,62 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       widget.paymentType,
                     ),
                     disabledBackgroundColor: Colors.grey[800],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
                   ),
                   child: paymentProvider.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : Text(
                           widget.paymentType == PaymentType.deposit
                               ? 'Proceed to Payment'
                               : 'Confirm Payment',
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
+
+              // Info Text
+              const SizedBox(height: 20),
+              if (widget.paymentType == PaymentType.deposit)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Colors.blue,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You will be redirected to Stripe payment page',
+                          style: TextStyle(
+                            color: Colors.grey[300],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -445,9 +570,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.blue),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
+        if (value == null || value.trim().isEmpty) {
           return 'This field is required';
         }
         return null;
