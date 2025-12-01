@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ImageService {
   static final ImagePicker _picker = ImagePicker();
@@ -101,6 +102,110 @@ class ImageService {
     } catch (e) {
       debugPrint('Error converting image to base64: $e');
       return null;
+    }
+  }
+
+  // ============ PERSISTENCE METHODS ============
+
+  // Save image as Base64 to SharedPreferences
+  static Future<bool> saveImageToPreferences(
+    String key,
+    String base64Image,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(key, base64Image);
+    } catch (e) {
+      debugPrint('Error saving image to preferences: $e');
+      return false;
+    }
+  }
+
+  // Get saved Base64 image from SharedPreferences
+  static Future<String?> getImageFromPreferences(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(key);
+    } catch (e) {
+      debugPrint('Error getting image from preferences: $e');
+      return null;
+    }
+  }
+
+  // Delete image from SharedPreferences
+  static Future<bool> deleteImageFromPreferences(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.remove(key);
+    } catch (e) {
+      debugPrint('Error deleting image from preferences: $e');
+      return false;
+    }
+  }
+
+  // Complete flow: Pick, Convert, and Save image
+  static Future<String?> pickAndSaveImage(
+    BuildContext context,
+    String storageKey,
+  ) async {
+    final imageFile = await showImageSourceDialog(context);
+    if (imageFile == null) return null;
+
+    final base64Image = await convertImageToBase64(imageFile);
+    if (base64Image == null) return null;
+
+    final saved = await saveImageToPreferences(storageKey, base64Image);
+    if (!saved) {
+      debugPrint('Failed to save image');
+      return null;
+    }
+
+    return base64Image;
+  }
+
+  // Display Base64 image widget
+  static Widget displayBase64Image(
+    String? base64String, {
+    double width = 100,
+    double height = 100,
+    BoxFit fit = BoxFit.cover,
+    Widget? placeholder,
+  }) {
+    if (base64String == null || base64String.isEmpty) {
+      return placeholder ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey[800],
+            child: const Icon(Icons.person, color: Colors.grey, size: 40),
+          );
+    }
+
+    try {
+      return Image.memory(
+        base64Decode(base64String),
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          return placeholder ??
+              Container(
+                width: width,
+                height: height,
+                color: Colors.grey[800],
+                child: const Icon(Icons.error, color: Colors.red),
+              );
+        },
+      );
+    } catch (e) {
+      debugPrint('Error displaying base64 image: $e');
+      return placeholder ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey[800],
+            child: const Icon(Icons.error, color: Colors.red),
+          );
     }
   }
 }

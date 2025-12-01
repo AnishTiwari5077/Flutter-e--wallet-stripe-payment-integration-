@@ -1,125 +1,169 @@
 import 'dart:convert';
-import 'package:app_wallet/models/user_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:app_wallet/models/user_model.dart';
 
 class ApiService {
-  // TODO: Change baseUrl based on your setup
-  // Android Emulator: http://10.0.2.2:5000
-  // iOS Simulator: http://localhost:5000
-  // Real Device: http://YOUR_COMPUTER_IP:5000
-  static const String baseUrl = "http://10.0.2.2:5000";
+  // IMPORTANT: Replace this with your actual Flask server IP or domain.
+  // If running locally on an emulator, use 10.0.2.2 for Android or localhost for iOS/Web.
+  static const String _baseUrl = 'http://10.0.2.2:5000';
+
+  static Map<String, String> _getHeaders() {
+    return {'Content-Type': 'application/json', 'Accept': 'application/json'};
+  }
+
+  // Helper function to handle common API response parsing
+  static Map<String, dynamic> _handleResponse(http.Response response) {
+    try {
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Successful response (2xx - e.g., 201 for register)
+        if (data.containsKey('user')) {
+          try {
+            // --- ADDED: Specific error logging for parsing failure ---
+            // Attempt to parse the User model
+            return {'success': true, 'user': User.fromJson(data['user'])};
+          } catch (e) {
+            // If User.fromJson fails, log the error and return failure map
+            print(
+              'Error during User model parsing (2xx response). Check user_model.dart for type mismatches: $e',
+            );
+            return {
+              'success': false,
+              'message': 'Failed to parse user data: $e',
+            };
+          }
+        }
+        // Success structure for other endpoints (e.g., balance update)
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Success',
+          'data': data,
+        };
+      } else {
+        // Error response (4xx, 5xx)
+        final errorMessage =
+            data['error'] ?? 'Server error (Status: ${response.statusCode})';
+        return {'success': false, 'message': errorMessage};
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to process server response: $e',
+      };
+    }
+  }
 
   // ============================================
-  // REGISTER USER
+  // REGISTER
   // ============================================
   static Future<Map<String, dynamic>> register(
     String name,
     String email,
     String password, {
     String phone = '',
-    String avatar = '',
+    String avatar = '', // Base64 string for avatar
   }) async {
+    final url = Uri.parse('$_baseUrl/register');
+    final body = {
+      'name': name,
+      'email': email,
+      'password': password,
+      'phone': phone,
+      'avatar': avatar,
+    };
+
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'phone': phone,
-          'avatar': avatar,
-        }),
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(body),
       );
 
-      print('Register Status: ${res.statusCode}');
-      print('Register Response: ${res.body}');
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['user'] != null) {
-          return {
-            'success': true,
-            'user': User.fromJson(body['user']),
-            'message': body['message'] ?? 'User registered successfully!',
-          };
-        }
-      }
-
-      final body = jsonDecode(res.body);
+      return _handleResponse(response);
+    } catch (e) {
       return {
         'success': false,
-        'message': body['error'] ?? 'Registration failed',
+        'message': 'Network error during registration: $e',
       };
-    } catch (e) {
-      print('Register Error: $e');
-      return {'success': false, 'message': 'Connection error: $e'};
     }
   }
 
   // ============================================
-  // LOGIN USER
+  // LOGIN
   // ============================================
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
   ) async {
+    final url = Uri.parse('$_baseUrl/login');
+    final body = {'email': email, 'password': password};
+
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+      final response = await http.post(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(body),
       );
 
-      print('Login Status: ${res.statusCode}');
-      print('Login Response: ${res.body}');
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['user'] != null) {
-          return {
-            'success': true,
-            'user': User.fromJson(body['user']),
-            'message': 'Login successful!',
-          };
-        }
-      }
-
-      final body = jsonDecode(res.body);
-      return {'success': false, 'message': body['error'] ?? 'Login failed'};
+      // The login route also returns a 'user' object upon success (200)
+      return _handleResponse(response);
     } catch (e) {
-      print('Login Error: $e');
-      return {'success': false, 'message': 'Connection error: $e'};
+      return {'success': false, 'message': 'Network error during login: $e'};
     }
   }
 
   // ============================================
-  // FETCH USER BY ID
+  // FETCH USER
   // ============================================
   static Future<User?> fetchUser(int userId) async {
+    final url = Uri.parse('$_baseUrl/user/$userId');
     try {
-      final res = await http.get(Uri.parse('$baseUrl/user/$userId'));
+      final response = await http.get(url, headers: _getHeaders());
 
-      print('Fetch User Status: ${res.statusCode}');
-      print('Fetch User Response: ${res.body}');
-
-      if (res.statusCode == 200) {
-        return User.fromJson(jsonDecode(res.body));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Direct conversion since this endpoint only returns the user object
+        try {
+          return User.fromJson(data);
+        } catch (e) {
+          print(
+            'Error during User model parsing (200 fetch response). Check user_model.dart for type mismatches: $e',
+          );
+          return null;
+        }
       }
       return null;
     } catch (e) {
-      print('Fetch User Error: $e');
+      print('Fetch user error: $e');
       return null;
     }
   }
 
   // ============================================
-  // CREATE PAYMENT INTENT (STRIPE)
+  // UPDATE USER PROFILE
   // ============================================
+  static Future<Map<String, dynamic>> updateUser(
+    int userId,
+    Map<String, dynamic> updates,
+  ) async {
+    final url = Uri.parse('$_baseUrl/user/$userId');
+    try {
+      final response = await http.put(
+        url,
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {'success': false, 'message': 'Network error during update: $e'};
+    }
+  }
+
   static Future<String?> createPaymentIntent(double amount) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/create-payment-intent'),
+        Uri.parse('$_baseUrl/create-payment-intent'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'amount': amount}),
       );
@@ -147,7 +191,7 @@ class ApiService {
   ) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/payment-success'),
+        Uri.parse('$_baseUrl/payment-success'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'amount': amount}),
       );
@@ -185,7 +229,7 @@ class ApiService {
   ) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/send'),
+        Uri.parse('$_baseUrl/send'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'sender_id': senderId,
@@ -227,7 +271,7 @@ class ApiService {
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/bank-transfer'),
+        Uri.parse('$_baseUrl/bank-transfer'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
@@ -271,7 +315,7 @@ class ApiService {
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/college-payment'),
+        Uri.parse('$_baseUrl/college-payment'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
@@ -315,7 +359,7 @@ class ApiService {
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/mobile-topup'),
+        Uri.parse('$_baseUrl/mobile-topup'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
@@ -358,7 +402,7 @@ class ApiService {
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/bill-payment'),
+        Uri.parse('$_baseUrl/bill-payment'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
@@ -401,7 +445,7 @@ class ApiService {
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/shopping-payment'),
+        Uri.parse('$_baseUrl/shopping-payment'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': userId,
@@ -438,7 +482,7 @@ class ApiService {
   // ============================================
   static Future<List<dynamic>> getAllTransactions() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/transactions'));
+      final res = await http.get(Uri.parse('$_baseUrl/transactions'));
 
       print('Get All Transactions Status: ${res.statusCode}');
 
@@ -457,7 +501,7 @@ class ApiService {
   // ============================================
   static Future<List<dynamic>> getUserTransactions(int userId) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/transactions/$userId'));
+      final res = await http.get(Uri.parse('$_baseUrl/transactions/$userId'));
 
       print('Get User Transactions Status: ${res.statusCode}');
 
@@ -476,7 +520,7 @@ class ApiService {
   // ============================================
   static Future<bool> testConnection() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/test-db'));
+      final res = await http.get(Uri.parse('$_baseUrl/test-db'));
       return res.statusCode == 200;
     } catch (e) {
       print('Test DB Error: $e');
@@ -484,3 +528,5 @@ class ApiService {
     }
   }
 }
+
+// Other financial transaction methods (send, topup, etc.) would go here...
