@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Subtitle
                   const Text(
-                    'Sign in to your neon wallet',
+                    'Sign in to your  wallet',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),

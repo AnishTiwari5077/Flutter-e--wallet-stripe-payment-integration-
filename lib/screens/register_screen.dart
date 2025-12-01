@@ -1,7 +1,8 @@
-import 'package:app_wallet/widgets/round_button.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/image_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,7 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _avatarController = TextEditingController();
+
+  File? _selectedImage;
+  String? _base64Image;
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -29,7 +32,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passController.dispose();
     _confirmPassController.dispose();
     _phoneController.dispose();
-    _avatarController.dispose();
     super.dispose();
   }
 
@@ -37,11 +39,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter your name';
     }
-
     if (value.trim().length < 2) {
       return 'Name must be at least 2 characters';
     }
-
     return null;
   }
 
@@ -49,12 +49,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter your email';
     }
-
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value.trim())) {
       return 'Please enter a valid email';
     }
-
     return null;
   }
 
@@ -62,11 +60,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value == null || value.isEmpty) {
       return 'Please enter a password';
     }
-
     if (value.length < 6) {
       return 'Password must be at least 6 characters';
     }
-
     return null;
   }
 
@@ -74,11 +70,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value == null || value.isEmpty) {
       return 'Please confirm your password';
     }
-
     if (value != _passController.text) {
       return 'Passwords do not match';
     }
-
     return null;
   }
 
@@ -86,19 +80,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter your phone number';
     }
-
-    // Remove spaces and special characters
     final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
-
     if (digitsOnly.length < 10) {
       return 'Phone number must be at least 10 digits';
     }
-
     return null;
   }
 
+  Future<void> _pickImage() async {
+    final image = await ImageService.showImageSourceDialog(context);
+
+    if (image != null) {
+      final base64 = await ImageService.convertImageToBase64(image);
+      setState(() {
+        _selectedImage = image;
+        _base64Image = base64;
+      });
+    }
+  }
+
   Future<void> _handleRegister() async {
-    // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -110,13 +111,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _emailController.text.trim(),
       _passController.text,
       phone: _phoneController.text.trim(),
-      avatar: _avatarController.text.trim(),
+      avatar: _base64Image ?? '', // Send base64 image
     );
 
     if (!mounted) return;
 
     if (success) {
-      // Registration successful
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registration successful! Please login.'),
@@ -124,10 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           duration: Duration(seconds: 2),
         ),
       );
-
       Navigator.pop(context);
     } else {
-      // Registration failed
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.errorMessage ?? 'Registration failed'),
@@ -171,29 +169,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 const SizedBox(height: 10),
 
-                // Icon
-                const Icon(
-                  Icons.person_add,
-                  size: 60,
-                  color: Colors.purpleAccent,
-                ),
-                const SizedBox(height: 20),
-
-                // Title
-                const Text(
-                  'Join Neon Wallet',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                // Profile Image Picker
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.purpleAccent,
+                              width: 3,
+                            ),
+                            image: _selectedImage != null
+                                ? DecorationImage(
+                                    image: FileImage(_selectedImage!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: _selectedImage == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: Colors.purpleAccent,
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Colors.purpleAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Create your account to get started',
+                  'Tap to add profile photo',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 const SizedBox(height: 30),
 
@@ -339,27 +369,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     errorStyle: const TextStyle(color: Colors.redAccent),
                   ),
                   validator: _validateConfirmPassword,
-                ),
-                const SizedBox(height: 16),
-
-                // Avatar Field (Optional)
-                TextFormField(
-                  controller: _avatarController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Avatar URL (optional)',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    prefixIcon: const Icon(
-                      Icons.image,
-                      color: Colors.purpleAccent,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 30),
 

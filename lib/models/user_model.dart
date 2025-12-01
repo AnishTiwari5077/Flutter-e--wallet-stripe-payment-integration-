@@ -16,14 +16,11 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Handle balance - could be String or num
-    double parseBalance(dynamic balanceValue) {
-      if (balanceValue == null) return 0.0;
-      if (balanceValue is double) return balanceValue;
-      if (balanceValue is int) return balanceValue.toDouble();
-      if (balanceValue is String) {
-        return double.tryParse(balanceValue) ?? 0.0;
-      }
+    // -------- SAFE BALANCE PARSER --------
+    double parseBalance(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble(); // int OR double
+      if (value is String) return double.tryParse(value) ?? 0.0;
       return 0.0;
     }
 
@@ -31,14 +28,17 @@ class User {
       id: json['id'] is int
           ? json['id']
           : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
+
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
+
+      // FIX: Safe fallback chain for avatar
       avatar:
-          json['avatar']?.toString() ??
-          json['photo']?.toString() ??
-          json['profile_url']?.toString() ??
+          (json['avatar'] ?? json['photo'] ?? json['profile_url'] ?? '')
+              ?.toString() ??
           '',
+
       balance: parseBalance(json['balance']),
     );
   }
@@ -52,7 +52,6 @@ class User {
     'balance': balance,
   };
 
-  // Create a copy of user with updated fields
   User copyWith({
     int? id,
     String? name,

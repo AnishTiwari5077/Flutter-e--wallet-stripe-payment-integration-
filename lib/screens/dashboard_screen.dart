@@ -5,6 +5,7 @@ import 'package:app_wallet/providers/payment_provider.dart';
 import 'package:app_wallet/providers/transaction_provider.dart';
 import 'package:app_wallet/widgets/neo_widget.dart';
 import 'package:app_wallet/screens/payment_screen.dart';
+import 'package:app_wallet/screens/transaction_history_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -106,6 +107,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // History Icon
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TransactionHistoryScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.history, color: Colors.white),
+            tooltip: 'Transaction History',
+          ),
+          // Logout Icon
           IconButton(
             onPressed: () async {
               await auth.logout();
