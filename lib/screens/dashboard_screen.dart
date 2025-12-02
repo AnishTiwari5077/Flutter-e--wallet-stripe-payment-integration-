@@ -298,12 +298,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color.withOpacity(0.3), color.withOpacity(0.12)],
+            colors: [color.withValues(alpha: .3), color.withValues(alpha: .12)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -312,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
               ),
               child: Icon(icon, size: 28, color: color),
             ),
@@ -430,16 +430,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: .08)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.25),
+              color: color.withValues(alpha: .25),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),

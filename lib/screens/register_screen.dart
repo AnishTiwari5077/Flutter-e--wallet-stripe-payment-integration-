@@ -239,7 +239,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: Colors.purpleAccent,
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -263,7 +263,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: Colors.purpleAccent,
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: .1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -287,7 +287,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: Colors.purpleAccent,
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -324,7 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -361,7 +361,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,

@@ -8,7 +8,7 @@ import 'package:app_wallet/providers/payment_provider.dart';
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
 
-  const PaymentScreen({Key? key, required this.paymentType}) : super(key: key);
+  const PaymentScreen({super.key, required this.paymentType});
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -147,10 +147,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       amount: amount,
       details: _buildTransactionDetails(amount),
       onConfirm: () {
-        print('✅ User confirmed ${widget.paymentType}');
+        //    print('✅ User confirmed ${widget.paymentType}');
       },
       onCancel: () {
-        print('❌ User cancelled ${widget.paymentType}');
+        //  print('❌ User cancelled ${widget.paymentType}');
       },
     );
 
@@ -316,12 +316,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 decoration: BoxDecoration(
                   color: paymentProvider
                       .getPaymentTypeColor(widget.paymentType)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: paymentProvider
                         .getPaymentTypeColor(widget.paymentType)
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(
@@ -350,7 +350,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -411,9 +411,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -621,14 +623,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
         labelStyle: const TextStyle(color: Colors.grey),
         hintStyle: TextStyle(color: Colors.grey[600]),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withValues(alpha: 0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

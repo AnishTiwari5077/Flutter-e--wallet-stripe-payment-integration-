@@ -455,8 +455,8 @@ class ApiService {
         }),
       );
 
-      print('Shopping Payment Status: ${res.statusCode}');
-      print('Shopping Payment Response: ${res.body}');
+      //  print('Shopping Payment Status: ${res.statusCode}');
+      //  print('Shopping Payment Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -472,7 +472,7 @@ class ApiService {
         'message': body['error'] ?? 'Shopping payment failed',
       };
     } catch (e) {
-      print('Shopping Payment Error: $e');
+      //     print('Shopping Payment Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -484,14 +484,14 @@ class ApiService {
     try {
       final res = await http.get(Uri.parse('$_baseUrl/transactions'));
 
-      print('Get All Transactions Status: ${res.statusCode}');
+      //  print('Get All Transactions Status: ${res.statusCode}');
 
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
       return [];
     } catch (e) {
-      print('Get All Transactions Error: $e');
+      //     print('Get All Transactions Error: $e');
       return [];
     }
   }
@@ -503,14 +503,14 @@ class ApiService {
     try {
       final res = await http.get(Uri.parse('$_baseUrl/transactions/$userId'));
 
-      print('Get User Transactions Status: ${res.statusCode}');
+      // print('Get User Transactions Status: ${res.statusCode}');
 
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
       return [];
     } catch (e) {
-      print('Get User Transactions Error: $e');
+      //   print('Get User Transactions Error: $e');
       return [];
     }
   }
@@ -523,7 +523,7 @@ class ApiService {
       final res = await http.get(Uri.parse('$_baseUrl/test-db'));
       return res.statusCode == 200;
     } catch (e) {
-      print('Test DB Error: $e');
+      //  print('Test DB Error: $e');
       return false;
     }
   }

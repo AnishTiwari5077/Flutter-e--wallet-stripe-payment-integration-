@@ -21,13 +21,13 @@ class TransactionConfirmationDialog extends StatelessWidget {
   final VoidCallback? onCancel;
 
   const TransactionConfirmationDialog({
-    Key? key,
+    super.key,
     required this.type,
     required this.amount,
     this.details,
     required this.onConfirm,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   /// Get transaction icon based on type
   IconData _getIcon() {
@@ -132,7 +132,7 @@ class TransactionConfirmationDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(_getIcon(), size: 48, color: color),
@@ -166,9 +166,12 @@ class TransactionConfirmationDialog extends StatelessWidget {
                     horizontal: 24,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withOpacity(0.3), width: 2),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -195,7 +198,7 @@ class TransactionConfirmationDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -239,9 +242,11 @@ class TransactionConfirmationDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [

@@ -84,10 +84,10 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
         'Balance After': '\$${(user.balance - amount).toStringAsFixed(2)}',
       },
       onConfirm: () {
-        print('✅ User confirmed send money');
+        //     print('✅ User confirmed send money');
       },
       onCancel: () {
-        print('❌ User cancelled send money');
+        //    print('❌ User cancelled send money');
       },
     );
 
@@ -207,9 +207,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

@@ -20,7 +20,7 @@ class PaymentService {
         return {'success': false, 'message': 'Amount must be greater than 0'};
       }
 
-      print('Starting Stripe payment for \$$amount');
+      //     print('Starting Stripe payment for \$$amount');
 
       // Step 1: Create payment intent from backend
       final clientSecret = await ApiService.createPaymentIntent(amount);
@@ -29,7 +29,7 @@ class PaymentService {
         return {'success': false, 'message': 'Failed to create payment intent'};
       }
 
-      print('Payment intent created, initializing payment sheet...');
+      // print('Payment intent created, initializing payment sheet...');
 
       // Step 2: Initialize payment sheet
       await Stripe.instance.initPaymentSheet(
@@ -40,18 +40,18 @@ class PaymentService {
         ),
       );
 
-      print('Payment sheet initialized, presenting to user...');
+      //    print('Payment sheet initialized, presenting to user...');
 
       // Step 3: Present payment sheet to user
       await Stripe.instance.presentPaymentSheet();
 
-      print('Payment completed, updating balance...');
+      //   print('Payment completed, updating balance...');
 
       // Step 4: Update balance in backend after successful payment
       final updateResult = await ApiService.updateBalance(userId, amount);
 
       if (updateResult['success'] == true) {
-        print('Balance updated successfully');
+        // print('Balance updated successfully');
         return {
           'success': true,
           'message': updateResult['message'] ?? 'Payment successful!',
@@ -64,7 +64,7 @@ class PaymentService {
         };
       }
     } on StripeException catch (e) {
-      print('Stripe Error: ${e.error.message}');
+      //   print('Stripe Error: ${e.error.message}');
 
       String errorMessage = 'Payment failed';
 
@@ -80,7 +80,7 @@ class PaymentService {
 
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('Payment Error: $e');
+      //  print('Payment Error: $e');
       return {'success': false, 'message': 'An unexpected error occurred: $e'};
     }
   }
@@ -98,7 +98,7 @@ class PaymentService {
         return {'success': false, 'message': 'Amount must be greater than 0'};
       }
 
-      print('Sending \$$amount from user $senderId to phone $receiverPhone');
+      //  print('Sending \$$amount from user $senderId to phone $receiverPhone');
 
       final result = await ApiService.sendMoney(
         senderId,
@@ -108,7 +108,7 @@ class PaymentService {
 
       return result;
     } catch (e) {
-      print('Send Money Error: $e');
+      //   print('Send Money Error: $e');
       return {'success': false, 'message': 'Failed to send money: $e'};
     }
   }

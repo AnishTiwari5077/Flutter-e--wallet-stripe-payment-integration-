@@ -4,7 +4,7 @@ import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/providers/transaction_provider.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
-  const TransactionHistoryScreen({Key? key}) : super(key: key);
+  const TransactionHistoryScreen({super.key});
 
   @override
   State<TransactionHistoryScreen> createState() =>
@@ -193,12 +193,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.purpleAccent
-              : Colors.white.withOpacity(0.1),
+              : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? Colors.purpleAccent
-                : Colors.white.withOpacity(0.2),
+                : Colors.white.withValues(alpha: 0.2),
           ),
         ),
         child: Text(
@@ -285,9 +285,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -295,7 +295,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 24),

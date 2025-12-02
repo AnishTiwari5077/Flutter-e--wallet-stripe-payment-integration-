@@ -3,8 +3,8 @@ class User {
   final String name;
   final String email;
   final String phone;
-  final String avatar; // URL (can be empty)
-  final double balance; // dollars
+  final String avatar;
+  final double balance;
 
   User({
     this.id,
@@ -16,10 +16,9 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // -------- SAFE BALANCE PARSER --------
     double parseBalance(dynamic value) {
       if (value == null) return 0.0;
-      if (value is num) return value.toDouble(); // int OR double
+      if (value is num) return value.toDouble();
       if (value is String) return double.tryParse(value) ?? 0.0;
       return 0.0;
     }
@@ -33,7 +32,6 @@ class User {
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
 
-      // FIX: Safe fallback chain for avatar
       avatar:
           (json['avatar'] ?? json['photo'] ?? json['profile_url'] ?? '')
               ?.toString() ??

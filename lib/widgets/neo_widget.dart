@@ -8,11 +8,11 @@ class NeonBalanceCard extends StatelessWidget {
   final double balance;
 
   const NeonBalanceCard({
-    Key? key,
+    super.key,
     required this.name,
     required this.avatarUrl,
     required this.balance,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +22,8 @@ class NeonBalanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.deepPurple.withOpacity(0.8),
-            Colors.purpleAccent.withOpacity(0.6),
+            Colors.deepPurple.withValues(alpha: 0.8),
+            Colors.purpleAccent.withValues(alpha: 0.6),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -31,7 +31,7 @@ class NeonBalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.purpleAccent.withOpacity(0.3),
+            color: Colors.purpleAccent.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -76,7 +76,7 @@ class NeonBalanceCard extends StatelessWidget {
                     border: Border.all(color: Colors.white, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -129,7 +129,7 @@ class NeonBalanceCard extends StatelessWidget {
 
   Widget _buildDefaultAvatar() {
     return Container(
-      color: Colors.purpleAccent.withOpacity(0.3),
+      color: Colors.purpleAccent.withValues(alpha: 0.3),
       child: const Icon(Icons.person, color: Colors.white, size: 30),
     );
   }

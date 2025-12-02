@@ -7,7 +7,7 @@ import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/services/image_service.dart';
 
 class ProfileEditDialog extends StatefulWidget {
-  const ProfileEditDialog({Key? key}) : super(key: key);
+  const ProfileEditDialog({super.key});
 
   @override
   State<ProfileEditDialog> createState() => _ProfileEditDialogState();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
+
 import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/providers/user_provider.dart';
 import 'package:app_wallet/providers/payment_provider.dart';
@@ -13,9 +13,8 @@ import 'package:app_wallet/screens/dashboard_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Stripe with your publishable key
   PaymentService.initializeStripe(
-    'pk_test_51SXvBHHKrFDpSpIkVxuXl5nyLySIPsmOBh6EOuy8Ih2xXqdFY3KdaSy0ga75PTjAEpG3wQtaGfKZFnyLr0WOwFD5002qz17NV2', // TODO: Replace with your actual key
+    'pk_test_51SXvBHHKrFDpSpIkVxuXl5nyLySIPsmOBh6EOuy8Ih2xXqdFY3KdaSy0ga75PTjAEpG3wQtaGfKZFnyLr0WOwFD5002qz17NV2',
   );
 
   runApp(const MyApp());
@@ -93,10 +92,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Kicks off the asynchronous check only ONCE in initState.
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // We use read() here because we are only initiating the process;
-      // we don't want the build method to be sensitive to the start of loading.
       context.read<AuthProvider>().checkAuthStatus();
     });
   }
@@ -128,21 +125,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // 2. User is Authenticated
     if (authProvider.isAuthenticated && authProvider.user != null) {
-      // 💡 THE FIX: DEFER the cross-provider state change to the next frame.
-      // This prevents the UserProvider's notifyListeners() from running
-      // while AuthWrapper is still in the process of building.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          // Safely update the UserProvider after the build cycle completes.
           context.read<UserProvider>().setUser(authProvider.user!);
         }
       });
 
-      // Safely return the DashboardScreen.
       return const DashboardScreen();
     }
 
-    // 3. User is NOT Authenticated
     return const LoginScreen();
   }
 }

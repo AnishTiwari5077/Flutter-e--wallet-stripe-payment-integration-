@@ -1,4 +1,3 @@
-import 'package:app_wallet/widgets/round_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -150,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.purpleAccent,
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
+                      fillColor: Colors.white.withValues(alpha: 0.1),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -187,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
+                      fillColor: Colors.white.withValues(alpha: 0.1),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
