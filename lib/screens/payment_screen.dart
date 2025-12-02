@@ -1,3 +1,5 @@
+import 'package:app_wallet/widgets/complete_transaction_dialog.dart'
+    show TransactionConfirmationDialog, TransactionType;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_wallet/providers/auth_provider.dart';
@@ -30,6 +32,75 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
+  TransactionType _getTransactionType() {
+    switch (widget.paymentType) {
+      case PaymentType.deposit:
+        return TransactionType.deposit;
+      case PaymentType.sendMoney:
+        return TransactionType.sendMoney;
+      case PaymentType.bankTransfer:
+        return TransactionType.bankTransfer;
+      case PaymentType.collegePayment:
+        return TransactionType.collegePayment;
+      case PaymentType.topup:
+        return TransactionType.mobileTopup;
+      case PaymentType.billPayment:
+        return TransactionType.billPayment;
+      case PaymentType.shopping:
+        return TransactionType.shopping;
+    }
+  }
+
+  Map<String, String> _buildTransactionDetails(double amount) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final user = auth.user!;
+
+    switch (widget.paymentType) {
+      case PaymentType.deposit:
+        return {
+          'Payment Method': 'Credit Card',
+          'Processing Fee': '\$${(amount * 0.029).toStringAsFixed(2)}',
+          'Total': '\$${(amount * 1.029).toStringAsFixed(2)}',
+        };
+
+      case PaymentType.sendMoney:
+        return {
+          'To': _phoneController.text.trim(),
+          'Your Balance': '\$${user.balance.toStringAsFixed(2)}',
+          'Balance After': '\$${(user.balance - amount).toStringAsFixed(2)}',
+        };
+
+      case PaymentType.bankTransfer:
+        return {
+          'Bank': _nameController.text.trim(),
+          'Account': _accountController.text.trim(),
+          'Your Balance': '\$${user.balance.toStringAsFixed(2)}',
+        };
+
+      case PaymentType.collegePayment:
+        return {
+          'Student ID': _accountController.text.trim(),
+          'College': _nameController.text.trim(),
+          'Semester': _extraController.text.trim(),
+        };
+
+      case PaymentType.topup:
+        return {
+          'Phone Number': _phoneController.text.trim(),
+          'Operator': _nameController.text.trim(),
+        };
+
+      case PaymentType.billPayment:
+        return {
+          'Bill Type': _nameController.text.trim(),
+          'Account': _accountController.text.trim(),
+        };
+
+      case PaymentType.shopping:
+        return {'Merchant': _nameController.text.trim()};
+    }
+  }
+
   Future<void> _handlePayment() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -51,56 +122,73 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    if (widget.paymentType == PaymentType.sendMoney ||
+        widget.paymentType == PaymentType.topup) {
+      if (!paymentProvider.validatePhoneNumber(_phoneController.text.trim())) {
+        _showMessage(
+          paymentProvider.errorMessage ?? 'Invalid phone',
+          isError: true,
+        );
+        return;
+      }
+    }
+
+    if (widget.paymentType != PaymentType.deposit) {
+      if (user.balance < amount) {
+        _showMessage('Insufficient balance', isError: true);
+        return;
+      }
+    }
+
+    // Show confirmation dialog
+    final confirmed = await TransactionConfirmationDialog.show(
+      context: context,
+      type: _getTransactionType(),
+      amount: amount,
+      details: _buildTransactionDetails(amount),
+      onConfirm: () {
+        print('✅ User confirmed ${widget.paymentType}');
+      },
+      onCancel: () {
+        print('❌ User cancelled ${widget.paymentType}');
+      },
+    );
+
+    if (confirmed != true) {
+      _showMessage('Transaction cancelled', isError: false);
+      return;
+    }
+
+    // Process payment
     bool success = false;
     dynamic result;
 
     switch (widget.paymentType) {
       case PaymentType.deposit:
-        // Deposit returns Map with user object
         result = await paymentProvider.depositMoney(
           userId: user.id!,
           amount: amount,
         );
         success = result['success'] == true;
 
-        // Update user with fresh data from backend
         if (success && result['user'] != null) {
           auth.updateUser(result['user']);
         }
         break;
 
       case PaymentType.sendMoney:
-        if (!paymentProvider.validatePhoneNumber(
-          _phoneController.text.trim(),
-        )) {
-          _showMessage(
-            paymentProvider.errorMessage ?? 'Invalid phone',
-            isError: true,
-          );
-          return;
-        }
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.sendMoney(
           senderId: user.id!,
           receiverPhone: _phoneController.text.trim(),
           amount: amount,
         );
-        // Deduct money immediately for instant UI feedback
         if (success) {
           auth.deductMoney(amount);
-          // Then refresh from backend to ensure accuracy
           await auth.refreshUser();
         }
         break;
 
       case PaymentType.bankTransfer:
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.bankTransfer(
           userId: user.id!,
           accountNumber: _accountController.text.trim(),
@@ -114,10 +202,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         break;
 
       case PaymentType.collegePayment:
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.collegePayment(
           userId: user.id!,
           studentId: _accountController.text.trim(),
@@ -132,10 +216,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         break;
 
       case PaymentType.topup:
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.mobileTopup(
           userId: user.id!,
           phoneNumber: _phoneController.text.trim(),
@@ -149,10 +229,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         break;
 
       case PaymentType.billPayment:
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.billPayment(
           userId: user.id!,
           billType: _nameController.text.trim(),
@@ -166,10 +242,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         break;
 
       case PaymentType.shopping:
-        if (user.balance < amount) {
-          _showMessage('Insufficient balance', isError: true);
-          return;
-        }
         success = await paymentProvider.shoppingPayment(
           userId: user.id!,
           merchantName: _nameController.text.trim(),
@@ -185,17 +257,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (mounted) {
       if (success) {
-        // Get message from result or provider
         final message = widget.paymentType == PaymentType.deposit
             ? result['message']
             : paymentProvider.successMessage;
 
         _showMessage(message ?? 'Success!', isError: false);
-
-        // Return true to signal success to dashboard
         Navigator.pop(context, true);
       } else {
-        // Get error message from result or provider
         final message = widget.paymentType == PaymentType.deposit
             ? result['message']
             : paymentProvider.errorMessage;
@@ -243,7 +311,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
             children: [
               const SizedBox(height: 20),
 
-              // Icon and Title Card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -300,12 +367,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 30),
 
-              // Dynamic Fields Based on Payment Type
               ..._buildFormFields(),
 
               const SizedBox(height: 30),
 
-              // Submit Button
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
@@ -341,7 +406,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
 
-              // Info Text
               const SizedBox(height: 20),
               if (widget.paymentType == PaymentType.deposit)
                 Container(

@@ -1,4 +1,6 @@
-import 'package:app_wallet/widgets/round_button.dart';
+import 'package:app_wallet/widgets/complete_transaction_dialog.dart';
+import 'package:app_wallet/widgets/round_textfield.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -27,7 +29,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final user = auth.user;
 
-    // Check if user exists and has valid ID
     if (user == null || user.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -38,7 +39,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
-    // Validate phone number
     final phone = phoneController.text.trim();
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,7 +50,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
-    // Parse and validate amount
     final amount = double.tryParse(amountController.text.trim());
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,7 +61,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
-    // Check if user has sufficient balance
     if (user.balance < amount) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -75,10 +73,37 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
+    // Show confirmation dialog
+    final confirmed = await TransactionConfirmationDialog.show(
+      context: context,
+      type: TransactionType.sendMoney,
+      amount: amount,
+      details: {
+        'To': phone,
+        'Your Balance': '\$${user.balance.toStringAsFixed(2)}',
+        'Balance After': '\$${(user.balance - amount).toStringAsFixed(2)}',
+      },
+      onConfirm: () {
+        print('✅ User confirmed send money');
+      },
+      onCancel: () {
+        print('❌ User cancelled send money');
+      },
+    );
+
+    if (confirmed != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Transaction cancelled'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
-      // Call send money service
       final result = await PaymentService.sendMoney(
         senderId: user.id!,
         receiverPhone: phone,
@@ -90,7 +115,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        // Deduct money from user balance
         auth.deductMoney(amount);
 
         ScaffoldMessenger.of(context).showSnackBar(
