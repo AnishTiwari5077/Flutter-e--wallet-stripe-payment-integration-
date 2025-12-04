@@ -4,7 +4,7 @@ import pymysql
 connection = pymysql.connect(
     host='localhost',
     user='root',
-    password='Aaa123@@@',  # Change to your MySQL password
+    password='',  # Change to your MySQL password
     cursorclass=pymysql.cursors.DictCursor
 )
 
@@ -53,7 +53,7 @@ try:
         connection.commit()
         
         # Verify
-        print("\n✅ Tables created successfully!")
+        print("\n Tables created successfully!")
         cursor.execute("SHOW TABLES")
         tables = cursor.fetchall()
         print("\nTables in ewallet database:")
@@ -75,4 +75,5 @@ except Exception as e:
     print(f"❌ Error: {e}")
 finally:
     connection.close()
+
     print("\n✅ Database setup complete!")
