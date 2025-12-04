@@ -4,24 +4,20 @@ import bcrypt
 import stripe
 from flask_cors import CORS
 import os
-# Removed: from dotenv import load_dotenv
 
-# Removed: load_dotenv()
 
 app = Flask(__name__)
-# Enable CORS for Flutter/Web clients
+
 CORS(app)
 
-# Stripe API Key (Using environment variable is safer in production)
-# Accessing env vars directly now
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", 
-    "sk_test_51SXvBHHKrFDpSpIkXW5NilPDcDxBcv2NA7D5jnWyfS2fIAZJ0TNK331jUlrQbiC6dy9Habi5zAKvTIJL0xhVynO8000h65209I")
 
-# Database configuration (Ensure these match your MySQL setup)
-# Accessing env vars directly now
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", 
+    "Your Api secret key") 
+
+
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "Aaa123@@@")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_NAME = os.environ.get("DB_NAME", "ewallet")
 
 # ---------------- DB CONNECTION ----------------
@@ -266,7 +262,7 @@ def payment_success():
         cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
         
-        print(f"✅ Balance updated: ${amount} added to user {user_id}")
+        print(f" Balance updated: ${amount} added to user {user_id}")
         
         return jsonify({"message": "Balance updated", "user": user}), 200
     except Exception as e:
@@ -319,7 +315,7 @@ def send_money():
         )
         conn.commit()
         
-        print(f"✅ Money sent: ${amount} from {sender_id} to {receiver_id}")
+        print(f" Money sent: ${amount} from {sender_id} to {receiver_id}")
         
         return jsonify({"message": "Money sent successfully!"}), 200
     except Exception as e:
@@ -364,7 +360,7 @@ def bank_transfer():
         )
         conn.commit()
         
-        print(f"✅ Bank transfer: ${amount} withdrawn by user {user_id}")
+        print(f" Bank transfer: ${amount} withdrawn by user {user_id}")
         
         return jsonify({"message": f"Bank transfer of ${amount} to {bank_name} successful!"}), 200
     except Exception as e:
@@ -638,4 +634,5 @@ def test_db():
         conn.close()
 
 if __name__ == "__main__":
+
     app.run(host="0.0.0.0", port=5000, debug=True)
