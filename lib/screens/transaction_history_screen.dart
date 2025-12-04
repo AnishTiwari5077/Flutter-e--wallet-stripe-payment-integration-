@@ -12,7 +12,7 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  String _filterType = 'all'; // all, send, receive, deposit
+  String _filterType = 'all'; 
 
   @override
   void initState() {
@@ -135,7 +135,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-          // Transaction List
+        
           Expanded(
             child: transactionProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -223,7 +223,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     String title;
     String subtitle = '';
 
-    // Determine icon, color, and title based on transaction type
+    
     switch (type) {
       case 'add':
         icon = Icons.add_circle;
@@ -302,7 +302,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           ),
           const SizedBox(width: 16),
 
-          // Details
+         
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +332,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-          // Amount
+         
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
