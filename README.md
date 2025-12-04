@@ -1,3 +1,4 @@
+
 # E‑Wallet using Stripe payment integration using my SQl 
 
 **Flask • MySQL • Stripe**
@@ -32,6 +33,17 @@ Primary goals: **correct money handling**, **fault tolerance**, **security**, an
 <img width="315" height="700" alt="Screenshot_1764834656" src="https://github.com/user-attachments/assets/5d47de05-fe92-452d-ba24-c3dd0392ceca" />
 <img width="315" height="700" alt="Screenshot_1764834760" src="https://github.com/user-attachments/assets/97969fd2-cb7e-47c8-9f82-d6018a245c63" />
 <img width="315" height="700" alt="Screenshot_1764834766" src="https://github.com/user-attachments/assets/6b27f1d3-43fd-4089-a462-b87d0e3292b5" />
+<img width="315" height="700" alt="Screenshot_1764835971" src="https://github.com/user-attachments/assets/26cda236-42ac-480c-ad57-a7a2edf3c103" />
+<img width="315" height="700" alt="Screenshot_1764834837" src="https://github.com/user-attachments/assets/ce449b78-0929-479f-bc70-560711ad47ba" />
+<img width="315" height="700" alt="Screenshot_1764834834" src="https://github.com/user-attachments/assets/291f990d-1c6c-4116-8795-4c9f0cc2d3e0" />
+<img width="315" height="700" alt="Screenshot_1764834826" src="https://github.com/user-attachments/assets/8ddc39b6-4485-4971-a8ef-eccf6d573e52" />
+<img width="315" height="700" alt="Screenshot_1764834822" src="https://github.com/user-attachments/assets/4a29fd65-a719-405c-b97f-0fb35d3eb88b" />
+<img width="315" height="700" alt="Screenshot_1764834817" src="https://github.com/user-attachments/assets/5f812fc8-d818-4ca8-b948-943a37305ca9" />
+<img width="315" height="700" alt="Screenshot_1764834813" src="https://github.com/user-attachments/assets/1a3eea8c-1202-4250-b238-362b4662573a" />
+<img width="315" height="700" alt="Screenshot_1764834786" src="https://github.com/user-attachments/assets/11d6bb89-bef6-421d-91f4-c3bda59d44d6" />
+<img width="315" height="700" alt="Screenshot_1764834781" src="https://github.com/user-attachments/assets/5e51cc67-e673-464e-8b65-926042f13e18" />
+<img width="315" height="700" alt="Screenshot_1764834773" src="https://github.com/user-attachments/assets/b0c29d1a-0ee0-43e4-b609-e1d0a48ca4e3" />
+<img width="315" height="700" alt="Screenshot_1764834766" src="https://github.com/user-attachments/assets/5747b8a8-68bc-410b-97a9-0f5bb579d005" />
 
 
 
@@ -303,6 +315,7 @@ Keep a list of escalation contacts and retention policy for logs and audit recor
 * Use feature branches and PR reviews. Include migration scripts with DB changes.
 
 ---
+
 
 
 
