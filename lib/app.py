@@ -43,7 +43,7 @@ def register():
     email = data.get("email")
     phone = data.get("phone", "")
     password = data.get("password")
-    avatar = data.get("avatar", "")  # Consistent use of 'avatar'
+    avatar = data.get("avatar", "")  
     
     if not name or not email or not password:
         return jsonify({"error": "Missing required fields"}), 400
@@ -65,12 +65,12 @@ def register():
         )
         conn.commit()
         
-        # Get the newly created user, selecting the 'avatar' column
+       
         user_id = cur.lastrowid
         cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
         
-        print(f"✅ User registered: {name} (Avatar size: {len(avatar)} bytes)")
+        print(f" User registered: {name} (Avatar size: {len(avatar)} bytes)")
         
         return jsonify({
             "user": user,
@@ -117,7 +117,7 @@ def login():
         
         # 'avatar' is already in the dictionary
         
-        print(f"✅ User logged in: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
+        print(f" User logged in: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
         
         return jsonify({"user": user}), 200
         
@@ -142,7 +142,7 @@ def get_user(id):
         
         # 'avatar' is already the correct key
         
-        print(f"✅ Fetched user: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
+        print(f" Fetched user: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
         
         return jsonify(user), 200
     except Exception as e:
@@ -179,7 +179,7 @@ def update_user(id):
             # Update 'avatar' column
             updates.append("avatar = %s")
             values.append(avatar)
-            print(f"🖼️  Updating avatar (size: {len(avatar)} bytes)")
+          print(f"  Updating avatar (size: {len(avatar)} bytes)")
         
         if not updates:
             return jsonify({"error": "No fields to update"}), 400
@@ -636,5 +636,6 @@ def test_db():
 if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
