@@ -21,9 +21,7 @@ class PaymentProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
 
-  // ============================================
-  // DEPOSIT MONEY (STRIPE)
-  // ============================================
+ 
   Future<Map<String, dynamic>> depositMoney({
     required int userId,
     required double amount,
@@ -42,7 +40,7 @@ class PaymentProvider with ChangeNotifier {
       if (result['success'] == true) {
         _successMessage = result['message'] ?? 'Deposit successful!';
         notifyListeners();
-        // Return user object to update in AuthProvider
+        
         return {
           'success': true,
           'message': _successMessage,
@@ -61,9 +59,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // SEND MONEY
-  // ============================================
   Future<bool> sendMoney({
     required int senderId,
     required String receiverPhone,
@@ -98,9 +93,7 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // BANK TRANSFER
-  // ============================================
+
   Future<bool> bankTransfer({
     required int userId,
     required String accountNumber,
@@ -137,9 +130,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // COLLEGE PAYMENT
-  // ============================================
   Future<bool> collegePayment({
     required int userId,
     required String studentId,
@@ -178,9 +168,7 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // MOBILE TOPUP
-  // ============================================
+
   Future<bool> mobileTopup({
     required int userId,
     required String phoneNumber,
@@ -217,9 +205,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // BILL PAYMENT
-  // ============================================
   Future<bool> billPayment({
     required int userId,
     required String billType,
@@ -256,9 +241,7 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // SHOPPING PAYMENT
-  // ============================================
+
   Future<bool> shoppingPayment({
     required int userId,
     required String merchantName,
@@ -295,9 +278,7 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // VALIDATE AMOUNT
-  // ============================================
+
   bool validateAmount(String amountText, {double? userBalance}) {
     final amount = double.tryParse(amountText);
 
@@ -317,9 +298,7 @@ class PaymentProvider with ChangeNotifier {
     return true;
   }
 
-  // ============================================
-  // VALIDATE PHONE NUMBER
-  // ============================================
+
   bool validatePhoneNumber(String phone) {
     if (phone.isEmpty) {
       _errorMessage = 'Please enter a phone number';
@@ -336,9 +315,6 @@ class PaymentProvider with ChangeNotifier {
     return true;
   }
 
-  // ============================================
-  // HELPER METHODS
-  // ============================================
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -354,7 +330,7 @@ class PaymentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Get payment type display name
+ 
   String getPaymentTypeName(PaymentType type) {
     switch (type) {
       case PaymentType.deposit:
@@ -374,7 +350,7 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // Get payment type icon
+ 
   IconData getPaymentTypeIcon(PaymentType type) {
     switch (type) {
       case PaymentType.deposit:
@@ -394,7 +370,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-  // Get payment type color
   Color getPaymentTypeColor(PaymentType type) {
     switch (type) {
       case PaymentType.deposit:
