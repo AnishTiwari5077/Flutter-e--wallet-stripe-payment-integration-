@@ -12,7 +12,7 @@ CORS(app)
 
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", 
-    "Your Api secret key") 
+    "Your Api secret keys") 
 
 
 DB_HOST = os.environ.get("DB_HOST", "localhost")
@@ -636,4 +636,5 @@ def test_db():
 if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
