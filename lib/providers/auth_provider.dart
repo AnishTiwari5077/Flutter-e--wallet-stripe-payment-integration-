@@ -82,9 +82,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // LOGOUT
-  // ============================================
+ 
   Future<void> logout() async {
     _user = null;
     _errorMessage = null;
@@ -92,9 +90,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // ============================================
-  // CHECK AUTH STATUS (Auto-login)
-  // ============================================
+ 
   Future<bool> checkAuthStatus() async {
     _loading = true;
     notifyListeners();
@@ -138,9 +134,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // REFRESH USER DATA FROM SERVER
-  // ============================================
+
   Future<void> refreshUser() async {
     if (_user?.id == null) return;
 
@@ -157,9 +151,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // UPDATE USER BALANCE
-  // ============================================
+
   void updateBalance(double newBalance) {
     if (_user != null) {
       _user = _user!.copyWith(balance: newBalance);
@@ -168,9 +160,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // UPDATE ENTIRE USER
-  // ============================================
+
   void updateUser(User updatedUser) {
     if (_user != updatedUser) {
       _user = updatedUser;
@@ -179,35 +169,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // ADD MONEY
-  // ============================================
+
   void addMoney(double amount) {
     if (_user != null) {
       updateBalance(_user!.balance + amount);
     }
   }
 
-  // ============================================
-  // DEDUCT MONEY
-  // ============================================
+
   void deductMoney(double amount) {
     if (_user != null && _user!.balance >= amount) {
       updateBalance(_user!.balance - amount);
     }
   }
 
-  // ============================================
-  // CLEAR ERROR MESSAGE
-  // ============================================
+
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  // ============================================
-  // PRIVATE: SAVE USER TO LOCAL STORAGE
-  // ============================================
+
   Future<void> _saveUserToLocal(User user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -218,9 +200,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ============================================
-  // PRIVATE: CLEAR USER FROM LOCAL STORAGE
-  // ============================================
+
   Future<void> _clearUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
