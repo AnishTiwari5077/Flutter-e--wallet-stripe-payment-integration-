@@ -32,6 +32,7 @@ Primary goals: **correct money handling**, **fault tolerance**, **security**, an
 <img width="315" height="700" alt="Screenshot_1764834662" src="https://github.com/user-attachments/assets/3b95a628-5bd2-499a-8a34-6a11d67f2dfa" />
 <img width="315" height="700" alt="Screenshot_1764834656" src="https://github.com/user-attachments/assets/5d47de05-fe92-452d-ba24-c3dd0392ceca" />
 <img width="315" height="700" alt="Screenshot_1764834760" src="https://github.com/user-attachments/assets/97969fd2-cb7e-47c8-9f82-d6018a245c63" />
+<img width="315" height="700" alt="Screenshot_1764834810" src="https://github.com/user-attachments/assets/590576a0-4690-4e71-8d37-716cd5aad783" />
 <img width="315" height="700" alt="Screenshot_1764834766" src="https://github.com/user-attachments/assets/6b27f1d3-43fd-4089-a462-b87d0e3292b5" />
 <img width="315" height="700" alt="Screenshot_1764835971" src="https://github.com/user-attachments/assets/26cda236-42ac-480c-ad57-a7a2edf3c103" />
 <img width="315" height="700" alt="Screenshot_1764834837" src="https://github.com/user-attachments/assets/ce449b78-0929-479f-bc70-560711ad47ba" />
@@ -315,6 +316,7 @@ Keep a list of escalation contacts and retention policy for logs and audit recor
 * Use feature branches and PR reviews. Include migration scripts with DB changes.
 
 ---
+
 
 
 
