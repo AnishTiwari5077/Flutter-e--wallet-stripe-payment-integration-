@@ -17,7 +17,7 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY",
 
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "your password")
 DB_NAME = os.environ.get("DB_NAME", "ewallet")
 
 # ---------------- DB CONNECTION ----------------
@@ -636,3 +636,4 @@ def test_db():
 if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=5000, debug=True)
+
