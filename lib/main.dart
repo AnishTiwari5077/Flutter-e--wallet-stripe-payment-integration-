@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:app_wallet/providers/auth_provider.dart';
-import 'package:app_wallet/providers/user_provider.dart';
 import 'package:app_wallet/providers/payment_provider.dart';
 import 'package:app_wallet/providers/transaction_provider.dart';
 import 'package:app_wallet/services/payment_service.dart';
 import 'package:app_wallet/screens/login_screen.dart';
-import 'package:app_wallet/screens/register_screen.dart';
 import 'package:app_wallet/screens/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Stripe
   PaymentService.initializeStripe(
-    'your publish key',
+    'pk_test_51SXvBHHKrFDpSpIkVxuXl5nyLySIPsmOBh6EOuy8Ih2xXqdFY3KdaSy0ga75PTjAEpG3wQtaGfKZFnyLr0WOwFD5002qz17NV2',
   );
 
   runApp(const MyApp());
@@ -27,50 +25,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Auth Provider - Handles authentication
+        // ✅ ONLY THREE PROVIDERS - UserProvider REMOVED
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-
-        // User Provider - Manages user state
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-
-        // Payment Provider - Handles all payment operations
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
-
-        // Transaction Provider - Manages transaction history
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
       ],
       child: MaterialApp(
         title: 'E-Wallet App',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          primarySwatch: Colors.purple,
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.dark,
-          ),
-          scaffoldBackgroundColor: const Color(0xFF080814),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.white,
-          ),
+          brightness: Brightness.dark,
         ),
-        home: const AuthWrapper(),
+        home: const SplashScreen(),
         routes: {
           '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
           '/dashboard': (context) => const DashboardScreen(),
         },
       ),
@@ -78,62 +48,59 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ============================================
-// AUTH WRAPPER (FIXED)
-// ============================================
-class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
+    // ✅ FIX: Wait for the frame to finish building before running auth logic
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().checkAuthStatus();
+      _checkAuthStatus();
     });
+  }
+
+  Future<void> _checkAuthStatus() async {
+    // Use 'listen: false' when calling methods inside functions to be safe
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Check authentication status
+    final isAuthenticated = await auth.checkAuthStatus();
+
+    if (!mounted) return;
+
+    if (isAuthenticated) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // LISTEN to the AuthProvider for its state changes.
-    final authProvider = context.watch<AuthProvider>();
-
-    // 1. Show Loading Screen
-    if (authProvider.loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF080814),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(
-                'Checking session...',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF080814),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.account_balance_wallet,
+              size: 80,
+              color: Colors.purpleAccent,
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(color: Colors.purpleAccent),
+            const SizedBox(height: 16),
+            const Text('Loading...', style: TextStyle(color: Colors.white70)),
+          ],
         ),
-      );
-    }
-
-    // 2. User is Authenticated
-    if (authProvider.isAuthenticated && authProvider.user != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<UserProvider>().setUser(authProvider.user!);
-        }
-      });
-
-      return const DashboardScreen();
-    }
-
-    return const LoginScreen();
+      ),
+    );
   }
 }

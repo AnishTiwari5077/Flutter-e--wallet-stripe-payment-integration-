@@ -1,23 +1,28 @@
+
 from flask import Flask, request, jsonify
 import pymysql
 import bcrypt
 import stripe
 from flask_cors import CORS
 import os
+# Removed: from dotenv import load_dotenv
 
+# Removed: load_dotenv()
 
 app = Flask(__name__)
-
+# Enable CORS for Flutter/Web clients
 CORS(app)
 
-
+# Stripe API Key (Using environment variable is safer in production)
+# Accessing env vars directly now
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", 
-    "Your Api secret keys") 
+    "sk_test_51SXvBHHKrFDpSpIkXW5NilPDcDxBcv2NA7D5jnWyfS2fIAZJ0TNK331jUlrQbiC6dy9Habi5zAKvTIJL0xhVynO8000h65209I")
 
-
+# Database configuration (Ensure these match your MySQL setup)
+# Accessing env vars directly now
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "your password")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "Aaa123@@@")
 DB_NAME = os.environ.get("DB_NAME", "ewallet")
 
 # ---------------- DB CONNECTION ----------------
@@ -43,7 +48,7 @@ def register():
     email = data.get("email")
     phone = data.get("phone", "")
     password = data.get("password")
-    avatar = data.get("avatar", "")  
+    avatar = data.get("avatar", "")  # Consistent use of 'avatar'
     
     if not name or not email or not password:
         return jsonify({"error": "Missing required fields"}), 400
@@ -65,12 +70,12 @@ def register():
         )
         conn.commit()
         
-       
+        # Get the newly created user, selecting the 'avatar' column
         user_id = cur.lastrowid
         cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
         
-        print(f" User registered: {name} (Avatar size: {len(avatar)} bytes)")
+        print(f"✅ User registered: {name} (Avatar size: {len(avatar)} bytes)")
         
         return jsonify({
             "user": user,
@@ -117,7 +122,7 @@ def login():
         
         # 'avatar' is already in the dictionary
         
-        print(f" User logged in: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
+        print(f"✅ User logged in: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
         
         return jsonify({"user": user}), 200
         
@@ -142,7 +147,7 @@ def get_user(id):
         
         # 'avatar' is already the correct key
         
-        print(f" Fetched user: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
+        print(f"✅ Fetched user: {user['name']} (Avatar size: {len(user.get('avatar', ''))} bytes)")
         
         return jsonify(user), 200
     except Exception as e:
@@ -179,7 +184,7 @@ def update_user(id):
             # Update 'avatar' column
             updates.append("avatar = %s")
             values.append(avatar)
-          print(f"  Updating avatar (size: {len(avatar)} bytes)")
+            print(f"🖼️  Updating avatar (size: {len(avatar)} bytes)")
         
         if not updates:
             return jsonify({"error": "No fields to update"}), 400
@@ -262,7 +267,7 @@ def payment_success():
         cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
         
-        print(f" Balance updated: ${amount} added to user {user_id}")
+        print(f"✅ Balance updated: ${amount} added to user {user_id}")
         
         return jsonify({"message": "Balance updated", "user": user}), 200
     except Exception as e:
@@ -315,7 +320,7 @@ def send_money():
         )
         conn.commit()
         
-        print(f" Money sent: ${amount} from {sender_id} to {receiver_id}")
+        print(f"✅ Money sent: ${amount} from {sender_id} to {receiver_id}")
         
         return jsonify({"message": "Money sent successfully!"}), 200
     except Exception as e:
@@ -360,7 +365,7 @@ def bank_transfer():
         )
         conn.commit()
         
-        print(f" Bank transfer: ${amount} withdrawn by user {user_id}")
+        print(f"✅ Bank transfer: ${amount} withdrawn by user {user_id}")
         
         return jsonify({"message": f"Bank transfer of ${amount} to {bank_name} successful!"}), 200
     except Exception as e:
@@ -461,6 +466,7 @@ def mobile_topup():
     finally:
         cur.close()
         conn.close()
+
 
 # ---------------- BILL PAYMENT ----------------
 @app.route("/bill-payment", methods=["POST"])
@@ -634,8 +640,4 @@ def test_db():
         conn.close()
 
 if __name__ == "__main__":
-
     app.run(host="0.0.0.0", port=5000, debug=True)
-
-
-

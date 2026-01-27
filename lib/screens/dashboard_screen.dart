@@ -365,7 +365,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  // TODO: Navigate to all transactions screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TransactionHistoryScreen(),
+                    ),
+                  );
                 },
                 child: const Text(
                   'See All',
@@ -411,35 +416,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Color color;
     String title;
 
-    if (type == 'add') {
-      icon = Icons.add_circle;
-      color = Colors.green;
-      title = 'Deposit';
-    } else if (isSent) {
-      icon = Icons.arrow_upward;
-      color = Colors.red;
-      title = 'Sent to ${tx['receiver_name'] ?? 'Unknown'}';
-    } else {
-      icon = Icons.arrow_downward;
-      color = Colors.green;
-      title = 'Received from ${tx['sender_name'] ?? 'Unknown'}';
+    // ✅ FIXED: Handle all transaction types properly
+    switch (type) {
+      case 'add':
+        icon = Icons.add_circle;
+        color = Colors.green;
+        title = 'Deposit';
+        break;
+
+      case 'send':
+        if (isSent) {
+          icon = Icons.arrow_upward;
+          color = Colors.red;
+          final receiverName = tx['receiver_name']?.toString();
+          title = receiverName != null && receiverName.isNotEmpty
+              ? 'Sent to $receiverName'
+              : 'Sent Money';
+        } else {
+          icon = Icons.arrow_downward;
+          color = Colors.green;
+          final senderName = tx['sender_name']?.toString();
+          title = senderName != null && senderName.isNotEmpty
+              ? 'Received from $senderName'
+              : 'Received Money';
+        }
+        break;
+
+      case 'bank_transfer':
+        icon = Icons.account_balance;
+        color = Colors.blue;
+        title = 'Bank Transfer';
+        break;
+
+      case 'college_payment':
+        icon = Icons.school;
+        color = Colors.orange;
+        title = 'College Payment';
+        break;
+
+      case 'mobile_topup':
+        // ✅ FIXED: No more "Sent to Unknown"
+        icon = Icons.phone_android;
+        color = Colors.green;
+        title = 'Mobile Topup';
+        break;
+
+      case 'bill_payment':
+        icon = Icons.receipt_long;
+        color = Colors.red;
+        title = 'Bill Payment';
+        break;
+
+      case 'shopping':
+        icon = Icons.shopping_bag;
+        color = Colors.pink;
+        title = 'Shopping';
+        break;
+
+      default:
+        icon = Icons.swap_horiz;
+        color = Colors.grey;
+        title = 'Transaction';
     }
 
     return Container(
-      key: ValueKey(tx['transaction_id']), // Add key for better performance
+      key: ValueKey(tx['transaction_id']),
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: .08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: .25),
+              color: color.withValues(alpha: 0.25),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),

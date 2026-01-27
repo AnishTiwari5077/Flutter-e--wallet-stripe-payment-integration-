@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class User {
   final int? id;
   final String name;
@@ -15,30 +17,58 @@ class User {
     this.balance = 0.0,
   });
 
+  // ✅ IMPROVED: Better parsing with detailed logging
   factory User.fromJson(Map<String, dynamic> json) {
-    double parseBalance(dynamic value) {
-      if (value == null) return 0.0;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value) ?? 0.0;
-      return 0.0;
+    try {
+      // Parse ID safely
+      int? parseId(dynamic value) {
+        if (value == null) return null;
+        if (value is int) return value;
+        if (value is String) return int.tryParse(value);
+        return null;
+      }
+
+      // Parse balance safely
+      double parseBalance(dynamic value) {
+        if (value == null) return 0.0;
+        if (value is num) return value.toDouble();
+        if (value is String) return double.tryParse(value) ?? 0.0;
+        return 0.0;
+      }
+
+      // Parse avatar - ONLY use 'avatar' key
+      String parseAvatar(dynamic value) {
+        if (value == null) return '';
+        final avatarStr = value.toString();
+        if (avatarStr.isNotEmpty) {
+          debugPrint('📸 Avatar received: ${avatarStr.length} chars');
+        }
+        return avatarStr;
+      }
+
+      return User(
+        id: parseId(json['id']),
+        name: json['name']?.toString() ?? '',
+        email: json['email']?.toString() ?? '',
+        phone: json['phone']?.toString() ?? '',
+        avatar: parseAvatar(json['avatar']), // ✅ Only 'avatar'
+        balance: parseBalance(json['balance']),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ User.fromJson error: $e');
+      debugPrint('Stack: $stackTrace');
+      debugPrint('JSON: $json');
+
+      // Return safe default
+      return User(
+        id: null,
+        name: 'Unknown',
+        email: '',
+        phone: '',
+        avatar: '',
+        balance: 0.0,
+      );
     }
-
-    return User(
-      id: json['id'] is int
-          ? json['id']
-          : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
-
-      name: json['name']?.toString() ?? '',
-      email: json['email']?.toString() ?? '',
-      phone: json['phone']?.toString() ?? '',
-
-      avatar:
-          (json['avatar'] ?? json['photo'] ?? json['profile_url'] ?? '')
-              ?.toString() ??
-          '',
-
-      balance: parseBalance(json['balance']),
-    );
   }
 
   Map<String, dynamic> toJson() => {
@@ -68,8 +98,16 @@ class User {
     );
   }
 
+  // ✅ IMPROVED: Better toString
   @override
   String toString() {
-    return 'User(id: $id, name: $name, email: $email, phone: $phone, balance: \$${balance.toStringAsFixed(2)})';
+    return 'User(id: $id, name: $name, email: $email, '
+        'phone: $phone, balance: \$${balance.toStringAsFixed(2)}, '
+        'avatarSize: ${avatar.length} chars)';
   }
+
+  // ✅ NEW: Validation methods
+  bool get isValid => id != null && name.isNotEmpty && email.isNotEmpty;
+  bool get hasAvatar => avatar.isNotEmpty;
+  bool get hasPhone => phone.isNotEmpty;
 }
