@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/providers/transaction_provider.dart';
+import 'package:app_wallet/services/receipt_service.dart';
+import 'package:app_wallet/screens/receipt_screen.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -12,7 +14,7 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  String _filterType = 'all'; 
+  String _filterType = 'all';
 
   @override
   void initState() {
@@ -55,6 +57,43 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           return true;
       }
     }).toList();
+  }
+
+  // ✅ NEW METHOD: Show receipt for a transaction
+  Future<void> _showTransactionReceipt(dynamic tx) async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final user = auth.user;
+
+      if (user == null) return;
+
+      // Create receipt from transaction data
+      final receipt = ReceiptService.createReceiptFromTransaction(
+        tx,
+        user.name,
+        user.email,
+        user.phone,
+        null, // Balance before (not available for historical transactions)
+        null, // Balance after (not available for historical transactions)
+      );
+
+      // Navigate to receipt screen
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ReceiptScreen(receipt: receipt)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating receipt: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -135,7 +174,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-        
           Expanded(
             child: transactionProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -223,7 +261,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     String title;
     String subtitle = '';
 
-    
     switch (type) {
       case 'add':
         icon = Icons.add_circle;
@@ -302,7 +339,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           ),
           const SizedBox(width: 16),
 
-         
+          // Transaction Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,10 +369,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-         
+          // Amount and Receipt Button Column
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Amount
               Text(
                 '${isSent && type != 'add' ? '-' : '+'}\$${amount.toStringAsFixed(2)}',
                 style: TextStyle(
@@ -344,6 +383,41 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   color: isSent && type != 'add'
                       ? Colors.redAccent
                       : Colors.greenAccent,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // ✅ RECEIPT BUTTON
+              InkWell(
+                onTap: () => _showTransactionReceipt(tx),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.purpleAccent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.purpleAccent.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt, size: 14, color: Colors.purpleAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Receipt',
+                        style: TextStyle(
+                          color: Colors.purpleAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
