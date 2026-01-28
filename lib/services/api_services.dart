@@ -5,7 +5,7 @@ import 'package:app_wallet/models/user_model.dart';
 class ApiService {
   // IMPORTANT: Replace this with your actual Flask server IP or domain.
   // If running locally on an emulator, use 10.0.2.2 for Android or localhost for iOS/Web.
-  static const String _baseUrl = 'http://192.168.1.65:5000';
+  static const String _baseUrl = 'http://10.0.2.2:5000';
 
   static Map<String, String> _getHeaders() {
     return {'Content-Type': 'application/json', 'Accept': 'application/json'};

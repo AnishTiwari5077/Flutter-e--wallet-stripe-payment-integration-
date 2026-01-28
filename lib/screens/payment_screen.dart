@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/providers/payment_provider.dart';
 
+// ✅ ADD THESE IMPORTS FOR RECEIPT FEATURE
+import 'package:app_wallet/services/receipt_service.dart';
+import 'package:app_wallet/screens/receipt_screen.dart';
+
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
 
@@ -146,18 +150,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       type: _getTransactionType(),
       amount: amount,
       details: _buildTransactionDetails(amount),
-      onConfirm: () {
-        //    print('✅ User confirmed ${widget.paymentType}');
-      },
-      onCancel: () {
-        //  print('❌ User cancelled ${widget.paymentType}');
-      },
+      onConfirm: () {},
+      onCancel: () {},
     );
 
     if (confirmed != true) {
       _showMessage('Transaction cancelled', isError: false);
       return;
     }
+
+    // ✅ CAPTURE BALANCE BEFORE TRANSACTION
+    final balanceBefore = user.balance;
 
     // Process payment
     bool success = false;
@@ -262,6 +265,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
             : paymentProvider.successMessage;
 
         _showMessage(message ?? 'Success!', isError: false);
+
+        // ✅ ========================================
+        // ✅ GENERATE AND SHOW RECEIPT
+        // ✅ ========================================
+        await _showTransactionReceipt(
+          amount: amount,
+          balanceBefore: balanceBefore,
+          balanceAfter: auth.user?.balance ?? balanceBefore,
+        );
+
+        // Navigate back to dashboard
         Navigator.pop(context, true);
       } else {
         final message = widget.paymentType == PaymentType.deposit
@@ -269,6 +283,104 @@ class _PaymentScreenState extends State<PaymentScreen> {
             : paymentProvider.errorMessage;
 
         _showMessage(message ?? 'Failed', isError: true);
+      }
+    }
+  }
+
+  // ✅ ========================================
+  // ✅ NEW METHOD: SHOW TRANSACTION RECEIPT
+  // ✅ ========================================
+  Future<void> _showTransactionReceipt({
+    required double amount,
+    required double balanceBefore,
+    required double balanceAfter,
+  }) async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final user = auth.user!;
+
+      // Create transaction data map
+      final transactionData = <String, dynamic>{
+        'transaction_id': 'TXN${DateTime.now().millisecondsSinceEpoch}',
+        'type': widget.paymentType.name,
+        'amount': amount,
+        'created_at': DateTime.now().toIso8601String(),
+        'status': 'Completed',
+      };
+
+      // Add specific fields based on payment type
+      switch (widget.paymentType) {
+        case PaymentType.deposit:
+          transactionData['processing_fee'] = amount * 0.029;
+          transactionData['total_amount'] = amount * 1.029;
+          break;
+
+        case PaymentType.sendMoney:
+          transactionData['receiver_phone'] = _phoneController.text.trim();
+          break;
+
+        case PaymentType.bankTransfer:
+          transactionData['bank_name'] = _nameController.text.trim();
+          transactionData['account_number'] = _accountController.text.trim();
+          break;
+
+        case PaymentType.collegePayment:
+          transactionData['college_name'] = _nameController.text.trim();
+          transactionData['student_id'] = _accountController.text.trim();
+          transactionData['semester'] = _extraController.text.trim();
+          break;
+
+        case PaymentType.topup:
+          transactionData['phone_number'] = _phoneController.text.trim();
+          transactionData['operator'] = _nameController.text.trim();
+          break;
+
+        case PaymentType.billPayment:
+          transactionData['bill_type'] = _nameController.text.trim();
+          transactionData['account_number'] = _accountController.text.trim();
+          break;
+
+        case PaymentType.shopping:
+          transactionData['merchant_name'] = _nameController.text.trim();
+          break;
+      }
+
+      // Create receipt model
+      final receipt = ReceiptService.createReceiptFromTransaction(
+        transactionData,
+        user.name,
+        user.email,
+        user.phone,
+        balanceBefore,
+        balanceAfter,
+      );
+
+      // Show receipt screen
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ReceiptScreen(receipt: receipt)),
+        );
+      }
+    } catch (e) {
+      // If receipt generation fails, don't block the user
+      debugPrint('Error generating receipt: $e');
+
+      // Optionally show a message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Transaction successful but receipt generation failed',
+            ),
+            backgroundColor: Colors.orange,
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
       }
     }
   }
