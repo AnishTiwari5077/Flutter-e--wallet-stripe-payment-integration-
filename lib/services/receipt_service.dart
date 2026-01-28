@@ -144,7 +144,7 @@ class ReceiptService {
       leading: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.purpleAccent.withOpacity(0.2),
+          color: Colors.purpleAccent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: Colors.purpleAccent),
