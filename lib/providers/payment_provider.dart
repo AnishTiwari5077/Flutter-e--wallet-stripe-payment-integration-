@@ -21,7 +21,6 @@ class PaymentProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
 
- 
   Future<Map<String, dynamic>> depositMoney({
     required int userId,
     required double amount,
@@ -40,7 +39,7 @@ class PaymentProvider with ChangeNotifier {
       if (result['success'] == true) {
         _successMessage = result['message'] ?? 'Deposit successful!';
         notifyListeners();
-        
+
         return {
           'success': true,
           'message': _successMessage,
@@ -92,7 +91,6 @@ class PaymentProvider with ChangeNotifier {
       return false;
     }
   }
-
 
   Future<bool> bankTransfer({
     required int userId,
@@ -168,7 +166,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-
   Future<bool> mobileTopup({
     required int userId,
     required String phoneNumber,
@@ -241,7 +238,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-
   Future<bool> shoppingPayment({
     required int userId,
     required String merchantName,
@@ -278,7 +274,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
-
   bool validateAmount(String amountText, {double? userBalance}) {
     final amount = double.tryParse(amountText);
 
@@ -297,7 +292,6 @@ class PaymentProvider with ChangeNotifier {
 
     return true;
   }
-
 
   bool validatePhoneNumber(String phone) {
     if (phone.isEmpty) {
@@ -330,7 +324,6 @@ class PaymentProvider with ChangeNotifier {
     notifyListeners();
   }
 
- 
   String getPaymentTypeName(PaymentType type) {
     switch (type) {
       case PaymentType.deposit:
@@ -350,7 +343,6 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
- 
   IconData getPaymentTypeIcon(PaymentType type) {
     switch (type) {
       case PaymentType.deposit:

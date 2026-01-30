@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/biometric_service.dart';
 import 'register_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -16,6 +17,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   bool _obscurePassword = true;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+  String _biometricType = 'Biometric';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await BiometricService.isBiometricAvailable();
+    final enabled = await BiometricService.isBiometricEnabledForLogin();
+    final type = await BiometricService.getBiometricTypeName();
+
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+      _biometricType = type;
+    });
+  }
 
   @override
   void dispose() {
@@ -50,6 +72,69 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
+  // ============================================
+  // BIOMETRIC LOGIN
+  // ============================================
+  Future<void> _handleBiometricLogin() async {
+    try {
+      final success = await BiometricService.authenticateForLogin();
+
+      if (!mounted) return;
+
+      if (success) {
+        // Get stored user and auto-login
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+
+        // Check if user is already authenticated
+        final isAuthenticated = await auth.checkAuthStatus();
+
+        if (isAuthenticated && auth.user != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${auth.user?.name ?? "User"}!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please login with email and password first'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$_biometricType authentication failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  // ============================================
+  // EMAIL/PASSWORD LOGIN
+  // ============================================
   Future<void> _handleLogin() async {
     // Validate form
     if (!_formKey.currentState!.validate()) {
@@ -130,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Subtitle
                   const Text(
-                    'Sign in to your  wallet',
+                    'Sign in to your wallet',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
@@ -228,6 +313,50 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     ),
                   ),
+
+                  // Biometric Login Button (NEW)
+                  if (_biometricAvailable && _biometricEnabled) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey[700])),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey[700])),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 54,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.purpleAccent,
+                          side: const BorderSide(
+                            color: Colors.purpleAccent,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _handleBiometricLogin,
+                        icon: const Icon(Icons.fingerprint, size: 28),
+                        label: Text(
+                          'Login with $_biometricType',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 20),
 
                   // Register Link

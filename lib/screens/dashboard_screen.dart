@@ -1,3 +1,4 @@
+import 'package:app_wallet/screens/security_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_wallet/providers/auth_provider.dart';
@@ -107,6 +108,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // Security Icon - NEW
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SecuritySettingsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.security, color: Colors.white),
+            tooltip: 'Security Settings',
+          ),
           // History Icon
           IconButton(
             onPressed: () {
@@ -416,7 +430,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Color color;
     String title;
 
-    // ✅ FIXED: Handle all transaction types properly
+    // Handle all transaction types properly
     switch (type) {
       case 'add':
         icon = Icons.add_circle;
@@ -455,7 +469,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         break;
 
       case 'mobile_topup':
-        // ✅ FIXED: No more "Sent to Unknown"
         icon = Icons.phone_android;
         color = Colors.green;
         title = 'Mobile Topup';

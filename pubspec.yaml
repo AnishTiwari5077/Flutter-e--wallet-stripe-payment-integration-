@@ -39,12 +39,18 @@ dependencies:
   provider: ^6.1.5+1
   shared_preferences: ^2.5.3
   image_picker: ^1.2.1
-  intl: ^0.20.2
+  intl: ^0.18.1
   pdf: ^3.11.3
   share_plus: ^12.0.1
   permission_handler: ^12.0.1
   printing: ^5.14.2
   path_provider: ^2.1.5
+  local_auth: ^3.0.0
+  local_auth_android: ^2.0.4
+  crypto: ^3.0.7
+  flutter_secure_storage: ^10.0.0
+  pinput: ^6.0.1
+  local_auth_ios: ^1.1.7
 
 dev_dependencies:
   flutter_test:

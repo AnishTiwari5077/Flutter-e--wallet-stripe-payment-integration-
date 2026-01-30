@@ -1,3 +1,4 @@
+import 'package:app_wallet/widgets/auth_transaction_helper.dart';
 import 'package:app_wallet/widgets/complete_transaction_dialog.dart'
     show TransactionConfirmationDialog, TransactionType;
 import 'package:flutter/material.dart';
@@ -5,9 +6,11 @@ import 'package:provider/provider.dart';
 import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:app_wallet/providers/payment_provider.dart';
 
-// ✅ ADD THESE IMPORTS FOR RECEIPT FEATURE
+// ✅ RECEIPT IMPORTS
 import 'package:app_wallet/services/receipt_service.dart';
 import 'package:app_wallet/screens/receipt_screen.dart';
+
+// ✅ BIOMETRIC AUTHENTICATION IMPORT
 
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
@@ -144,7 +147,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     }
 
-    // Show confirmation dialog
+    // ============================================
+    // ✅ STEP 1: AUTHENTICATE USER (BIOMETRIC/PIN)
+    // ============================================
+    final authenticated = await TransactionAuthHelper.authenticate(context);
+
+    if (!authenticated) {
+      _showMessage(
+        'Authentication required to complete transaction',
+        isError: true,
+      );
+      return;
+    }
+
+    // ============================================
+    // ✅ STEP 2: SHOW CONFIRMATION DIALOG
+    // ============================================
     final confirmed = await TransactionConfirmationDialog.show(
       context: context,
       type: _getTransactionType(),
@@ -162,7 +180,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     // ✅ CAPTURE BALANCE BEFORE TRANSACTION
     final balanceBefore = user.balance;
 
-    // Process payment
+    // ============================================
+    // ✅ STEP 3: PROCESS PAYMENT
+    // ============================================
     bool success = false;
     dynamic result;
 
