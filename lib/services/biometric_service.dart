@@ -3,19 +3,30 @@ import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_ios/local_auth_ios.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 class BiometricService {
   static final LocalAuthentication _localAuth = LocalAuthentication();
 
-  // Keys for SharedPreferences
+  // Configure secure storage with platform-specific options
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+
+  // Keys for SharedPreferences (non-sensitive data)
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _pinEnabledKey = 'pin_enabled';
   static const String _pinHashKey = 'pin_hash';
   static const String _loginBiometricKey = 'login_biometric_enabled';
   static const String _transactionBiometricKey =
       'transaction_biometric_enabled';
+
+  // Keys for Secure Storage (sensitive data)
+  static const String _secureEmailKey = 'secure_biometric_email';
+  static const String _securePasswordKey = 'secure_biometric_password';
 
   // ============================================
   // CHECK BIOMETRIC AVAILABILITY
@@ -73,6 +84,64 @@ class BiometricService {
       return false;
     } catch (e) {
       print('Unexpected error during biometric authentication: $e');
+      return false;
+    }
+  }
+
+  // ============================================
+  // SECURE CREDENTIAL STORAGE
+  // ============================================
+
+  /// Store credentials securely for biometric login
+  static Future<bool> storeBiometricCredentials(
+    String email,
+    String password,
+  ) async {
+    try {
+      await _secureStorage.write(key: _secureEmailKey, value: email);
+      await _secureStorage.write(key: _securePasswordKey, value: password);
+      return true;
+    } catch (e) {
+      print('Error storing biometric credentials: $e');
+      return false;
+    }
+  }
+
+  /// Retrieve stored credentials for biometric login
+  static Future<Map<String, String>?> getBiometricCredentials() async {
+    try {
+      final email = await _secureStorage.read(key: _secureEmailKey);
+      final password = await _secureStorage.read(key: _securePasswordKey);
+
+      if (email != null && password != null) {
+        return {'email': email, 'password': password};
+      }
+      return null;
+    } catch (e) {
+      print('Error getting biometric credentials: $e');
+      return null;
+    }
+  }
+
+  /// Clear stored credentials
+  static Future<bool> clearBiometricCredentials() async {
+    try {
+      await _secureStorage.delete(key: _secureEmailKey);
+      await _secureStorage.delete(key: _securePasswordKey);
+      return true;
+    } catch (e) {
+      print('Error clearing biometric credentials: $e');
+      return false;
+    }
+  }
+
+  /// Check if credentials are stored
+  static Future<bool> hasStoredCredentials() async {
+    try {
+      final email = await _secureStorage.read(key: _secureEmailKey);
+      return email != null;
+    } catch (e) {
+      print('Error checking stored credentials: $e');
       return false;
     }
   }
@@ -195,6 +264,9 @@ class BiometricService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_loginBiometricKey, false);
+
+      // Clear stored credentials when disabling biometric login
+      await clearBiometricCredentials();
 
       // If transaction biometric is also disabled, disable biometric completely
       final transactionEnabled = await isBiometricEnabledForTransactions();
@@ -350,6 +422,9 @@ class BiometricService {
       await prefs.remove(_pinHashKey);
       await prefs.remove(_loginBiometricKey);
       await prefs.remove(_transactionBiometricKey);
+
+      // Clear secure credentials
+      await clearBiometricCredentials();
 
       return true;
     } catch (e) {

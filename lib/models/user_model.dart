@@ -110,4 +110,6 @@ class User {
   bool get isValid => id != null && name.isNotEmpty && email.isNotEmpty;
   bool get hasAvatar => avatar.isNotEmpty;
   bool get hasPhone => phone.isNotEmpty;
+
+  String? get password => null;
 }

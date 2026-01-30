@@ -19,22 +19,24 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
+  bool _hasStoredCredentials = false;
   String _biometricType = 'Biometric';
-
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _checkBiometricAvailability();
   }
 
   Future<void> _checkBiometricAvailability() async {
     final available = await BiometricService.isBiometricAvailable();
     final enabled = await BiometricService.isBiometricEnabledForLogin();
+    final hasCredentials = await BiometricService.hasStoredCredentials();
     final type = await BiometricService.getBiometricTypeName();
 
     setState(() {
       _biometricAvailable = available;
       _biometricEnabled = enabled;
+      _hasStoredCredentials = hasCredentials;
       _biometricType = type;
     });
   }
@@ -77,43 +79,80 @@ class _LoginScreenState extends State<LoginScreen> {
   // ============================================
   Future<void> _handleBiometricLogin() async {
     try {
-      final success = await BiometricService.authenticateForLogin();
+      // Check if credentials are stored
+      if (!_hasStoredCredentials) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please login with email and password first to set up biometric login',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Authenticate with biometric
+      final authenticated = await BiometricService.authenticateForLogin();
+
+      if (!mounted) return;
+
+      if (!authenticated) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$_biometricType authentication failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Get stored credentials
+      final credentials = await BiometricService.getBiometricCredentials();
+
+      if (credentials == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No stored credentials found. Please login with email and password.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Login with stored credentials
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final success = await auth.login(
+        credentials['email']!,
+        credentials['password']!,
+      );
 
       if (!mounted) return;
 
       if (success) {
-        // Get stored user and auto-login
-        final auth = Provider.of<AuthProvider>(context, listen: false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome back, ${auth.user?.name ?? "User"}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
 
-        // Check if user is already authenticated
-        final isAuthenticated = await auth.checkAuthStatus();
-
-        if (isAuthenticated && auth.user != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome back, ${auth.user?.name ?? "User"}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please login with email and password first'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$_biometricType authentication failed'),
+            content: Text(auth.errorMessage ?? 'Login failed'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -151,6 +190,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
+      // Update stored credentials flag if biometric is enabled
+      if (_biometricEnabled) {
+        setState(() {
+          _hasStoredCredentials = true;
+        });
+      }
+
       // Login successful
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -314,8 +360,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  // Biometric Login Button (NEW)
-                  if (_biometricAvailable && _biometricEnabled) ...[
+                  // Biometric Login Button - Only show if all conditions are met
+                  if (_biometricAvailable &&
+                      _biometricEnabled &&
+                      _hasStoredCredentials) ...[
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -344,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: _handleBiometricLogin,
+                        onPressed: auth.loading ? null : _handleBiometricLogin,
                         icon: const Icon(Icons.fingerprint, size: 28),
                         label: Text(
                           'Login with $_biometricType',

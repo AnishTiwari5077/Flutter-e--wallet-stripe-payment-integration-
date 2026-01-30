@@ -1,6 +1,8 @@
+import 'package:app_wallet/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:app_wallet/services/biometric_service.dart';
-import 'package:app_wallet/widgets/pin_input_dialog.dart';
+import 'package:provider/provider.dart';
+import '../services/biometric_service.dart';
+import '../widgets/pin_input_dialog.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -14,6 +16,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   bool _biometricLoginEnabled = false;
   bool _biometricTransactionEnabled = false;
   bool _pinEnabled = false;
+  bool _hasStoredCredentials = false;
   String _biometricType = 'Biometric';
   bool _isLoading = true;
 
@@ -31,6 +34,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     final transactionEnabled =
         await BiometricService.isBiometricEnabledForTransactions();
     final pinSet = await BiometricService.isPinSet();
+    final hasCredentials = await BiometricService.hasStoredCredentials();
     final biometricType = await BiometricService.getBiometricTypeName();
 
     setState(() {
@@ -38,6 +42,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       _biometricLoginEnabled = loginEnabled;
       _biometricTransactionEnabled = transactionEnabled;
       _pinEnabled = pinSet;
+      _hasStoredCredentials = hasCredentials;
       _biometricType = biometricType;
       _isLoading = false;
     });
@@ -57,8 +62,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         final success = await BiometricService.enableBiometricLogin();
 
         if (success) {
-          setState(() => _biometricLoginEnabled = true);
-          _showSuccessMessage('$_biometricType login enabled');
+          setState(() {
+            _biometricLoginEnabled = true;
+          });
+          _showSuccessMessage(
+            '$_biometricType login enabled. Please login with email and password once to complete setup.',
+          );
         } else {
           _showErrorMessage('Failed to enable $_biometricType login');
         }
@@ -67,10 +76,21 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       }
     } else {
       // Disable biometric login
+      final confirm = await _showConfirmDialog(
+        title: 'Disable $_biometricType Login?',
+        content:
+            'This will also clear your stored credentials. You will need to login with email and password next time.',
+      );
+
+      if (confirm != true) return;
+
       final success = await BiometricService.disableBiometricLogin();
 
       if (success) {
-        setState(() => _biometricLoginEnabled = false);
+        setState(() {
+          _biometricLoginEnabled = false;
+          _hasStoredCredentials = false;
+        });
         _showSuccessMessage('$_biometricType login disabled');
       } else {
         _showErrorMessage('Failed to disable $_biometricType login');
@@ -92,12 +112,30 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         final success = await BiometricService.enableBiometricForTransactions();
 
         if (success) {
-          setState(() => _biometricTransactionEnabled = true);
-          _showSuccessMessage('$_biometricType for transactions enabled');
-        } else {
-          _showErrorMessage(
-            'Failed to enable $_biometricType for transactions',
-          );
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+
+          // If user is already logged in, store credentials immediately
+          if (auth.user != null) {
+            final stored = await BiometricService.storeBiometricCredentials(
+              auth.user!.email,
+              auth.user!.password ?? '',
+            );
+
+            setState(() {
+              _biometricLoginEnabled = true;
+              _hasStoredCredentials = stored;
+            });
+
+            _showSuccessMessage('$_biometricType login enabled successfully');
+          } else {
+            setState(() {
+              _biometricLoginEnabled = true;
+            });
+
+            _showSuccessMessage(
+              '$_biometricType login enabled. Please login once to complete setup.',
+            );
+          }
         }
       } else {
         _showErrorMessage('Authentication failed');
@@ -233,27 +271,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     }
 
     // Confirm removal
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Remove PIN?', style: TextStyle(color: Colors.white)),
-        content: const Text(
+    final confirm = await _showConfirmDialog(
+      title: 'Remove PIN?',
+      content:
           'Are you sure you want to remove your PIN? This will disable PIN authentication for transactions.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
@@ -267,6 +288,53 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     } else {
       _showErrorMessage('Failed to remove PIN');
     }
+  }
+
+  // ============================================
+  // CLEAR STORED CREDENTIALS
+  // ============================================
+  Future<void> _clearStoredCredentials() async {
+    final confirm = await _showConfirmDialog(
+      title: 'Clear Stored Credentials?',
+      content:
+          'This will remove your stored login credentials. You will need to login with email and password to use biometric login again.',
+    );
+
+    if (confirm != true) return;
+
+    final success = await BiometricService.clearBiometricCredentials();
+
+    if (success) {
+      setState(() => _hasStoredCredentials = false);
+      _showSuccessMessage('Stored credentials cleared');
+    } else {
+      _showErrorMessage('Failed to clear credentials');
+    }
+  }
+
+  Future<bool?> _showConfirmDialog({
+    required String title,
+    required String content,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(content, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSuccessMessage(String message) {
@@ -385,6 +453,13 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               _buildSectionTitle('Biometric Authentication'),
               const SizedBox(height: 16),
               _buildBiometricCard(),
+
+              // Stored Credentials Section
+              if (_hasStoredCredentials) ...[
+                const SizedBox(height: 16),
+                _buildStoredCredentialsCard(),
+              ],
+
               const SizedBox(height: 32),
             ] else ...[
               _buildUnavailableCard(
@@ -506,6 +581,50 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 activeColor: Colors.orange,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoredCredentialsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.vpn_key, color: Colors.blue, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Credentials Stored',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Your login credentials are securely stored',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _clearStoredCredentials,
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
           ),
         ],
       ),

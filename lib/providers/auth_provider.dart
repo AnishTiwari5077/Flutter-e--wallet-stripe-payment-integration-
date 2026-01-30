@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:app_wallet/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_wallet/models/user_model.dart';
+import '../models/user_model.dart';
+import '../services/api_services.dart';
+import '../services/biometric_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -14,6 +15,9 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
   String? get errorMessage => _errorMessage;
 
+  // ============================================
+  // LOGIN
+  // ============================================
   Future<bool> login(String email, String password) async {
     _loading = true;
     _errorMessage = null;
@@ -25,6 +29,14 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
         await _saveUserToLocal(_user!);
+
+        // Store credentials for biometric login if enabled
+        final biometricEnabled =
+            await BiometricService.isBiometricEnabledForLogin();
+        if (biometricEnabled) {
+          await BiometricService.storeBiometricCredentials(email, password);
+        }
+
         _loading = false;
         notifyListeners();
         return true;
@@ -42,6 +54,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // ============================================
+  // REGISTER
+  // ============================================
   Future<bool> register(
     String name,
     String email,
@@ -65,6 +80,14 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true && result['user'] != null) {
         _user = result['user'];
         await _saveUserToLocal(_user!);
+
+        // Store credentials for biometric login if enabled
+        final biometricEnabled =
+            await BiometricService.isBiometricEnabledForLogin();
+        if (biometricEnabled) {
+          await BiometricService.storeBiometricCredentials(email, password);
+        }
+
         _loading = false;
         notifyListeners();
         return true;
@@ -82,15 +105,25 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
- 
+  // ============================================
+  // LOGOUT
+  // ============================================
   Future<void> logout() async {
     _user = null;
     _errorMessage = null;
-    await _clearUserFromLocal();
+
+    // Clear user data from local storage
+    // await _clearUserFromLocal();
+
+    // Clear biometric credentials
+    // await BiometricService.clearBiometricCredentials();
+
     notifyListeners();
   }
 
- 
+  // ============================================
+  // CHECK AUTH STATUS
+  // ============================================
   Future<bool> checkAuthStatus() async {
     _loading = true;
     notifyListeners();
@@ -117,7 +150,7 @@ class AuthProvider with ChangeNotifier {
           notifyListeners();
           return true;
         } catch (e) {
-          //  print('Error parsing local user data: $e');
+          print('Error parsing local user data: $e');
           await _clearUserFromLocal();
           _user = null;
         }
@@ -127,14 +160,16 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      //   print('Check auth status error: $e');
+      print('Check auth status error: $e');
       _loading = false;
       notifyListeners();
       return false;
     }
   }
 
-
+  // ============================================
+  // REFRESH USER
+  // ============================================
   Future<void> refreshUser() async {
     if (_user?.id == null) return;
 
@@ -147,11 +182,13 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      //    print('Refresh user error: $e');
+      print('Refresh user error: $e');
     }
   }
 
-
+  // ============================================
+  // UPDATE BALANCE
+  // ============================================
   void updateBalance(double newBalance) {
     if (_user != null) {
       _user = _user!.copyWith(balance: newBalance);
@@ -160,7 +197,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-
+  // ============================================
+  // UPDATE USER
+  // ============================================
   void updateUser(User updatedUser) {
     if (_user != updatedUser) {
       _user = updatedUser;
@@ -169,44 +208,54 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-
+  // ============================================
+  // ADD MONEY
+  // ============================================
   void addMoney(double amount) {
     if (_user != null) {
       updateBalance(_user!.balance + amount);
     }
   }
 
-
+  // ============================================
+  // DEDUCT MONEY
+  // ============================================
   void deductMoney(double amount) {
     if (_user != null && _user!.balance >= amount) {
       updateBalance(_user!.balance - amount);
     }
   }
 
-
+  // ============================================
+  // CLEAR ERROR
+  // ============================================
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-
+  // ============================================
+  // SAVE USER TO LOCAL STORAGE
+  // ============================================
   Future<void> _saveUserToLocal(User user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userJson = jsonEncode(user.toJson());
       await prefs.setString('user', userJson);
     } catch (e) {
-      //    print('Save user to local error: $e');
+      print('Save user to local error: $e');
     }
   }
 
-
+  // ============================================
+  // CLEAR USER FROM LOCAL STORAGE
+  // ============================================
   Future<void> _clearUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user');
     } catch (e) {
-      //   print('Clear user from local error: $e');
+      print('Clear user from local error: $e');
     }
   }
 }
