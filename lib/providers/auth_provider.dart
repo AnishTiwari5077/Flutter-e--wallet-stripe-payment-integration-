@@ -150,7 +150,7 @@ class AuthProvider with ChangeNotifier {
           notifyListeners();
           return true;
         } catch (e) {
-          print('Error parsing local user data: $e');
+          //     print('Error parsing local user data: $e');
           await _clearUserFromLocal();
           _user = null;
         }
@@ -160,7 +160,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      print('Check auth status error: $e');
+      //   print('Check auth status error: $e');
       _loading = false;
       notifyListeners();
       return false;
@@ -182,7 +182,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Refresh user error: $e');
+      //  print('Refresh user error: $e');
     }
   }
 
@@ -243,7 +243,7 @@ class AuthProvider with ChangeNotifier {
       final userJson = jsonEncode(user.toJson());
       await prefs.setString('user', userJson);
     } catch (e) {
-      print('Save user to local error: $e');
+      //   print('Save user to local error: $e');
     }
   }
 
@@ -255,7 +255,7 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user');
     } catch (e) {
-      print('Clear user from local error: $e');
+      //  print('Clear user from local error: $e');
     }
   }
 }
