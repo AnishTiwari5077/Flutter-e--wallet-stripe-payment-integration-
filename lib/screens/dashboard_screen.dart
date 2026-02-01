@@ -35,7 +35,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await auth.refreshUser();
 
     // Fetch transactions if user exists
-    if (auth.user?.id != null && mounted) {
+    if (!mounted) return;
+    if (auth.user?.id != null) {
       await transactions.fetchUserTransactions(auth.user!.id!);
     }
   }
@@ -138,9 +139,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: () async {
               await auth.logout();
-              if (mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, '/login');
             },
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
@@ -150,6 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await auth.refreshUser();
+          if (!mounted) return;
           if (user.id != null) {
             await transactionProvider.refreshTransactions(user.id!);
           }
@@ -293,20 +294,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await auth.refreshUser();
 
           // Refresh transactions
+          if (!mounted) return;
           if (auth.user?.id != null) {
             await transactions.refreshTransactions(auth.user!.id!);
           }
 
           // Show success feedback
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Transaction completed successfully!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transaction completed successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
         }
       },
       child: Container(

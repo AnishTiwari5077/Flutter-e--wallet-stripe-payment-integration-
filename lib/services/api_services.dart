@@ -8,8 +8,18 @@ class ApiService {
 
   static const String _baseUrl = 'http://192.168.1.65:5000';
 
+  // Debug mode flag - set to false to disable all debug prints
+  static bool debugMode = true;
+
   static Map<String, String> _getHeaders() {
     return {'Content-Type': 'application/json', 'Accept': 'application/json'};
+  }
+
+  // Debug print helper
+  static void _debugPrint(String message) {
+    if (debugMode) {
+      print(message);
+    }
   }
 
   // Helper function to handle common API response parsing
@@ -26,7 +36,7 @@ class ApiService {
             return {'success': true, 'user': User.fromJson(data['user'])};
           } catch (e) {
             // If User.fromJson fails, log the error and return failure map
-            print(
+            _debugPrint(
               'Error during User model parsing (2xx response). Check user_model.dart for type mismatches: $e',
             );
             return {
@@ -128,7 +138,7 @@ class ApiService {
         try {
           return User.fromJson(data);
         } catch (e) {
-          print(
+          _debugPrint(
             'Error during User model parsing (200 fetch response). Check user_model.dart for type mismatches: $e',
           );
           return null;
@@ -136,7 +146,7 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('Fetch user error: $e');
+      _debugPrint('Fetch user error: $e');
       return null;
     }
   }
@@ -169,8 +179,8 @@ class ApiService {
         body: jsonEncode({'amount': amount}),
       );
 
-      print('Create Payment Intent Status: ${res.statusCode}');
-      print('Create Payment Intent Response: ${res.body}');
+      _debugPrint('Create Payment Intent Status: ${res.statusCode}');
+      _debugPrint('Create Payment Intent Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -178,7 +188,7 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('Create Payment Intent Error: $e');
+      _debugPrint('Create Payment Intent Error: $e');
       return null;
     }
   }
@@ -197,8 +207,8 @@ class ApiService {
         body: jsonEncode({'user_id': userId, 'amount': amount}),
       );
 
-      print('Update Balance Status: ${res.statusCode}');
-      print('Update Balance Response: ${res.body}');
+      _debugPrint('Update Balance Status: ${res.statusCode}');
+      _debugPrint('Update Balance Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -215,7 +225,7 @@ class ApiService {
         'message': body['error'] ?? 'Failed to update balance',
       };
     } catch (e) {
-      print('Update Balance Error: $e');
+      _debugPrint('Update Balance Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -239,8 +249,8 @@ class ApiService {
         }),
       );
 
-      print('Send Money Status: ${res.statusCode}');
-      print('Send Money Response: ${res.body}');
+      _debugPrint('Send Money Status: ${res.statusCode}');
+      _debugPrint('Send Money Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -256,7 +266,7 @@ class ApiService {
         'message': body['error'] ?? 'Failed to send money',
       };
     } catch (e) {
-      print('Send Money Error: $e');
+      _debugPrint('Send Money Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -282,8 +292,8 @@ class ApiService {
         }),
       );
 
-      print('Bank Transfer Status: ${res.statusCode}');
-      print('Bank Transfer Response: ${res.body}');
+      _debugPrint('Bank Transfer Status: ${res.statusCode}');
+      _debugPrint('Bank Transfer Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -299,7 +309,7 @@ class ApiService {
         'message': body['error'] ?? 'Bank transfer failed',
       };
     } catch (e) {
-      print('Bank Transfer Error: $e');
+      _debugPrint('Bank Transfer Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -327,8 +337,8 @@ class ApiService {
         }),
       );
 
-      print('College Payment Status: ${res.statusCode}');
-      print('College Payment Response: ${res.body}');
+      _debugPrint('College Payment Status: ${res.statusCode}');
+      _debugPrint('College Payment Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -344,7 +354,7 @@ class ApiService {
         'message': body['error'] ?? 'College payment failed',
       };
     } catch (e) {
-      print('College Payment Error: $e');
+      _debugPrint('College Payment Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -370,8 +380,8 @@ class ApiService {
         }),
       );
 
-      print('Mobile Topup Status: ${res.statusCode}');
-      print('Mobile Topup Response: ${res.body}');
+      _debugPrint('Mobile Topup Status: ${res.statusCode}');
+      _debugPrint('Mobile Topup Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -387,7 +397,7 @@ class ApiService {
         'message': body['error'] ?? 'Mobile topup failed',
       };
     } catch (e) {
-      print('Mobile Topup Error: $e');
+      _debugPrint('Mobile Topup Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -413,8 +423,8 @@ class ApiService {
         }),
       );
 
-      print('Bill Payment Status: ${res.statusCode}');
-      print('Bill Payment Response: ${res.body}');
+      _debugPrint('Bill Payment Status: ${res.statusCode}');
+      _debugPrint('Bill Payment Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -430,7 +440,7 @@ class ApiService {
         'message': body['error'] ?? 'Bill payment failed',
       };
     } catch (e) {
-      print('Bill Payment Error: $e');
+      _debugPrint('Bill Payment Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -456,8 +466,8 @@ class ApiService {
         }),
       );
 
-      //  print('Shopping Payment Status: ${res.statusCode}');
-      //  print('Shopping Payment Response: ${res.body}');
+      _debugPrint('Shopping Payment Status: ${res.statusCode}');
+      _debugPrint('Shopping Payment Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -473,7 +483,7 @@ class ApiService {
         'message': body['error'] ?? 'Shopping payment failed',
       };
     } catch (e) {
-      //     print('Shopping Payment Error: $e');
+      _debugPrint('Shopping Payment Error: $e');
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -485,14 +495,14 @@ class ApiService {
     try {
       final res = await http.get(Uri.parse('$_baseUrl/transactions'));
 
-      //  print('Get All Transactions Status: ${res.statusCode}');
+      _debugPrint('Get All Transactions Status: ${res.statusCode}');
 
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
       return [];
     } catch (e) {
-      //     print('Get All Transactions Error: $e');
+      _debugPrint('Get All Transactions Error: $e');
       return [];
     }
   }
@@ -504,14 +514,14 @@ class ApiService {
     try {
       final res = await http.get(Uri.parse('$_baseUrl/transactions/$userId'));
 
-      // print('Get User Transactions Status: ${res.statusCode}');
+      _debugPrint('Get User Transactions Status: ${res.statusCode}');
 
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
       return [];
     } catch (e) {
-      //   print('Get User Transactions Error: $e');
+      _debugPrint('Get User Transactions Error: $e');
       return [];
     }
   }
@@ -524,10 +534,8 @@ class ApiService {
       final res = await http.get(Uri.parse('$_baseUrl/test-db'));
       return res.statusCode == 200;
     } catch (e) {
-      //  print('Test DB Error: $e');
+      _debugPrint('Test DB Error: $e');
       return false;
     }
   }
 }
-
-// Other financial transaction methods (send, topup, etc.) would go here...

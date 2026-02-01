@@ -114,7 +114,7 @@ class TransactionAuthHelper {
       // No authentication method available
       return true;
     } catch (e) {
-      print('Authentication error: $e');
+      //  print('Authentication error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

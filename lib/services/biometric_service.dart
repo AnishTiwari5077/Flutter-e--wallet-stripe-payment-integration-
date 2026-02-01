@@ -6,9 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 class BiometricService {
   static final LocalAuthentication _localAuth = LocalAuthentication();
+
+  // Debug mode flag - set to false to disable all debug prints
+  static bool debugMode = true;
 
   // Configure secure storage with platform-specific options
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
@@ -28,6 +32,13 @@ class BiometricService {
   static const String _secureEmailKey = 'secure_biometric_email';
   static const String _securePasswordKey = 'secure_biometric_password';
 
+  // Debug print helper
+  static void _debugPrint(String message) {
+    if (debugMode) {
+      debugPrint(message);
+    }
+  }
+
   // ============================================
   // CHECK BIOMETRIC AVAILABILITY
   // ============================================
@@ -39,7 +50,7 @@ class BiometricService {
           canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
       return canAuthenticate;
     } catch (e) {
-      print('Error checking biometric availability: $e');
+      _debugPrint('Error checking biometric availability: $e');
       return false;
     }
   }
@@ -51,7 +62,7 @@ class BiometricService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      print('Error getting available biometrics: $e');
+      _debugPrint('Error getting available biometrics: $e');
       return [];
     }
   }
@@ -80,10 +91,10 @@ class BiometricService {
         ],
       );
     } on PlatformException catch (e) {
-      print('Biometric authentication error: ${e.message}');
+      _debugPrint('Biometric authentication error: ${e.message}');
       return false;
     } catch (e) {
-      print('Unexpected error during biometric authentication: $e');
+      _debugPrint('Unexpected error during biometric authentication: $e');
       return false;
     }
   }
@@ -102,7 +113,7 @@ class BiometricService {
       await _secureStorage.write(key: _securePasswordKey, value: password);
       return true;
     } catch (e) {
-      print('Error storing biometric credentials: $e');
+      _debugPrint('Error storing biometric credentials: $e');
       return false;
     }
   }
@@ -118,7 +129,7 @@ class BiometricService {
       }
       return null;
     } catch (e) {
-      print('Error getting biometric credentials: $e');
+      _debugPrint('Error getting biometric credentials: $e');
       return null;
     }
   }
@@ -130,7 +141,7 @@ class BiometricService {
       await _secureStorage.delete(key: _securePasswordKey);
       return true;
     } catch (e) {
-      print('Error clearing biometric credentials: $e');
+      _debugPrint('Error clearing biometric credentials: $e');
       return false;
     }
   }
@@ -141,7 +152,7 @@ class BiometricService {
       final email = await _secureStorage.read(key: _secureEmailKey);
       return email != null;
     } catch (e) {
-      print('Error checking stored credentials: $e');
+      _debugPrint('Error checking stored credentials: $e');
       return false;
     }
   }
@@ -172,7 +183,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error setting PIN: $e');
+      _debugPrint('Error setting PIN: $e');
       return false;
     }
   }
@@ -190,7 +201,7 @@ class BiometricService {
       final inputHash = _hashPin(pin);
       return storedHash == inputHash;
     } catch (e) {
-      print('Error verifying PIN: $e');
+      _debugPrint('Error verifying PIN: $e');
       return false;
     }
   }
@@ -201,7 +212,7 @@ class BiometricService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_pinEnabledKey) ?? false;
     } catch (e) {
-      print('Error checking PIN status: $e');
+      _debugPrint('Error checking PIN status: $e');
       return false;
     }
   }
@@ -214,7 +225,7 @@ class BiometricService {
       await prefs.setBool(_pinEnabledKey, false);
       return true;
     } catch (e) {
-      print('Error removing PIN: $e');
+      _debugPrint('Error removing PIN: $e');
       return false;
     }
   }
@@ -230,7 +241,7 @@ class BiometricService {
 
       return await setPin(newPin);
     } catch (e) {
-      print('Error changing PIN: $e');
+      _debugPrint('Error changing PIN: $e');
       return false;
     }
   }
@@ -254,7 +265,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error enabling biometric login: $e');
+      _debugPrint('Error enabling biometric login: $e');
       return false;
     }
   }
@@ -276,7 +287,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error disabling biometric login: $e');
+      _debugPrint('Error disabling biometric login: $e');
       return false;
     }
   }
@@ -296,7 +307,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error enabling biometric for transactions: $e');
+      _debugPrint('Error enabling biometric for transactions: $e');
       return false;
     }
   }
@@ -315,7 +326,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error disabling biometric for transactions: $e');
+      _debugPrint('Error disabling biometric for transactions: $e');
       return false;
     }
   }
@@ -326,7 +337,7 @@ class BiometricService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_loginBiometricKey) ?? false;
     } catch (e) {
-      print('Error checking biometric login status: $e');
+      _debugPrint('Error checking biometric login status: $e');
       return false;
     }
   }
@@ -337,7 +348,7 @@ class BiometricService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_transactionBiometricKey) ?? false;
     } catch (e) {
-      print('Error checking biometric transaction status: $e');
+      _debugPrint('Error checking biometric transaction status: $e');
       return false;
     }
   }
@@ -348,7 +359,7 @@ class BiometricService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_biometricEnabledKey) ?? false;
     } catch (e) {
-      print('Error checking biometric status: $e');
+      _debugPrint('Error checking biometric status: $e');
       return false;
     }
   }
@@ -387,7 +398,7 @@ class BiometricService {
       // This will be handled by the UI showing PIN dialog
       return false;
     } catch (e) {
-      print('Error in transaction authentication: $e');
+      _debugPrint('Error in transaction authentication: $e');
       return false;
     }
   }
@@ -405,7 +416,7 @@ class BiometricService {
 
       return await authenticateWithBiometric(reason: 'Authenticate to login');
     } catch (e) {
-      print('Error in login authentication: $e');
+      _debugPrint('Error in login authentication: $e');
       return false;
     }
   }
@@ -428,7 +439,7 @@ class BiometricService {
 
       return true;
     } catch (e) {
-      print('Error resetting security settings: $e');
+      _debugPrint('Error resetting security settings: $e');
       return false;
     }
   }

@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _biometricEnabled = false;
   bool _hasStoredCredentials = false;
   String _biometricType = 'Biometric';
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -32,6 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final enabled = await BiometricService.isBiometricEnabledForLogin();
     final hasCredentials = await BiometricService.hasStoredCredentials();
     final type = await BiometricService.getBiometricTypeName();
+
+    if (!mounted) return;
 
     setState(() {
       _biometricAvailable = available;
@@ -128,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // Login with stored credentials
+      if (!mounted) return;
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final success = await auth.login(
         credentials['email']!,
@@ -159,15 +163,14 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 

@@ -537,7 +537,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               Switch(
                 value: _biometricLoginEnabled,
                 onChanged: _toggleBiometricLogin,
-                activeColor: Colors.green,
+                activeThumbColor: Colors.green,
               ),
             ],
           ),
@@ -578,7 +578,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               Switch(
                 value: _biometricTransactionEnabled,
                 onChanged: _toggleBiometricTransaction,
-                activeColor: Colors.orange,
+                activeThumbColor: Colors.orange,
               ),
             ],
           ),

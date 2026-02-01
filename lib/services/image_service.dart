@@ -64,7 +64,9 @@ class ImageService {
                 ),
                 onTap: () async {
                   final image = await pickImageFromGallery();
-                  Navigator.pop(context, image);
+                  if (context.mounted) {
+                    Navigator.pop(context, image);
+                  }
                 },
               ),
               ListTile(
@@ -78,7 +80,9 @@ class ImageService {
                 ),
                 onTap: () async {
                   final image = await captureImageFromCamera();
-                  Navigator.pop(context, image);
+                  if (context.mounted) {
+                    Navigator.pop(context, image);
+                  }
                 },
               ),
             ],

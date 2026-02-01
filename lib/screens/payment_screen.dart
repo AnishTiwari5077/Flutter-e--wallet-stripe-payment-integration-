@@ -119,12 +119,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final user = auth.user;
 
     if (user == null || user.id == null) {
+      if (!mounted) return;
       _showMessage('Please login again', isError: true);
       return;
     }
 
     final amount = double.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
+      if (!mounted) return;
       _showMessage('Please enter a valid amount', isError: true);
       return;
     }
@@ -132,6 +134,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (widget.paymentType == PaymentType.sendMoney ||
         widget.paymentType == PaymentType.topup) {
       if (!paymentProvider.validatePhoneNumber(_phoneController.text.trim())) {
+        if (!mounted) return;
         _showMessage(
           paymentProvider.errorMessage ?? 'Invalid phone',
           isError: true,
@@ -142,6 +145,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (widget.paymentType != PaymentType.deposit) {
       if (user.balance < amount) {
+        if (!mounted) return;
         _showMessage('Insufficient balance', isError: true);
         return;
       }
@@ -150,9 +154,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     // ============================================
     // ✅ STEP 1: AUTHENTICATE USER (BIOMETRIC/PIN)
     // ============================================
+    if (!mounted) return;
     final authenticated = await TransactionAuthHelper.authenticate(context);
 
     if (!authenticated) {
+      if (!mounted) return;
       _showMessage(
         'Authentication required to complete transaction',
         isError: true,
@@ -163,6 +169,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     // ============================================
     // ✅ STEP 2: SHOW CONFIRMATION DIALOG
     // ============================================
+    if (!mounted) return;
     final confirmed = await TransactionConfirmationDialog.show(
       context: context,
       type: _getTransactionType(),
@@ -173,6 +180,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
 
     if (confirmed != true) {
+      if (!mounted) return;
       _showMessage('Transaction cancelled', isError: false);
       return;
     }
@@ -278,32 +286,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
         break;
     }
 
-    if (mounted) {
-      if (success) {
-        final message = widget.paymentType == PaymentType.deposit
-            ? result['message']
-            : paymentProvider.successMessage;
+    if (!mounted) return;
 
-        _showMessage(message ?? 'Success!', isError: false);
+    if (success) {
+      final message = widget.paymentType == PaymentType.deposit
+          ? result['message']
+          : paymentProvider.successMessage;
 
-        // ✅ ========================================
-        // ✅ GENERATE AND SHOW RECEIPT
-        // ✅ ========================================
-        await _showTransactionReceipt(
-          amount: amount,
-          balanceBefore: balanceBefore,
-          balanceAfter: auth.user?.balance ?? balanceBefore,
-        );
+      _showMessage(message ?? 'Success!', isError: false);
 
-        // Navigate back to dashboard
-        Navigator.pop(context, true);
-      } else {
-        final message = widget.paymentType == PaymentType.deposit
-            ? result['message']
-            : paymentProvider.errorMessage;
+      // ✅ ========================================
+      // ✅ GENERATE AND SHOW RECEIPT
+      // ✅ ========================================
+      await _showTransactionReceipt(
+        amount: amount,
+        balanceBefore: balanceBefore,
+        balanceAfter: auth.user?.balance ?? balanceBefore,
+      );
 
-        _showMessage(message ?? 'Failed', isError: true);
-      }
+      // Navigate back to dashboard
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } else {
+      final message = widget.paymentType == PaymentType.deposit
+          ? result['message']
+          : paymentProvider.errorMessage;
+
+      _showMessage(message ?? 'Failed', isError: true);
     }
   }
 
@@ -376,36 +385,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
 
       // Show receipt screen
-      if (mounted) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ReceiptScreen(receipt: receipt)),
-        );
-      }
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ReceiptScreen(receipt: receipt)),
+      );
     } catch (e) {
       // If receipt generation fails, don't block the user
       debugPrint('Error generating receipt: $e');
 
       // Optionally show a message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaction successful but receipt generation failed',
-            ),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Transaction successful but receipt generation failed',
           ),
-        );
-      }
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
     }
   }
 
   void _showMessage(String message, {required bool isError}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
