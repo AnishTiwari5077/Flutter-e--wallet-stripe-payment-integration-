@@ -37,6 +37,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     final hasCredentials = await BiometricService.hasStoredCredentials();
     final biometricType = await BiometricService.getBiometricTypeName();
 
+    if (!mounted) return;
+
     setState(() {
       _biometricAvailable = available;
       _biometricLoginEnabled = loginEnabled;
@@ -58,8 +60,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         reason: 'Authenticate to enable $_biometricType for login',
       );
 
+      if (!mounted) return;
+
       if (authenticated) {
         final success = await BiometricService.enableBiometricLogin();
+
+        if (!mounted) return;
 
         if (success) {
           setState(() {
@@ -82,9 +88,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             'This will also clear your stored credentials. You will need to login with email and password next time.',
       );
 
+      if (!mounted) return;
       if (confirm != true) return;
 
       final success = await BiometricService.disableBiometricLogin();
+
+      if (!mounted) return;
 
       if (success) {
         setState(() {
@@ -108,8 +117,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         reason: 'Authenticate to enable $_biometricType for transactions',
       );
 
+      if (!mounted) return;
+
       if (authenticated) {
         final success = await BiometricService.enableBiometricForTransactions();
+
+        if (!mounted) return;
 
         if (success) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -121,21 +134,25 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               auth.user!.password ?? '',
             );
 
+            if (!mounted) return;
+
             setState(() {
-              _biometricLoginEnabled = true;
+              _biometricTransactionEnabled = true;
               _hasStoredCredentials = stored;
             });
 
-            _showSuccessMessage('$_biometricType login enabled successfully');
+            _showSuccessMessage('$_biometricType for transactions enabled');
           } else {
             setState(() {
-              _biometricLoginEnabled = true;
+              _biometricTransactionEnabled = true;
             });
 
-            _showSuccessMessage(
-              '$_biometricType login enabled. Please login once to complete setup.',
-            );
+            _showSuccessMessage('$_biometricType for transactions enabled');
           }
+        } else {
+          _showErrorMessage(
+            'Failed to enable $_biometricType for transactions',
+          );
         }
       } else {
         _showErrorMessage('Authentication failed');
@@ -143,6 +160,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     } else {
       // Disable biometric for transactions
       final success = await BiometricService.disableBiometricForTransactions();
+
+      if (!mounted) return;
 
       if (success) {
         setState(() => _biometricTransactionEnabled = false);
@@ -165,6 +184,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       isSetup: true,
     );
 
+    if (!mounted) return;
     if (pin1 == null || pin1.length != 4) return;
 
     // Confirm PIN entry
@@ -175,6 +195,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       isSetup: true,
     );
 
+    if (!mounted) return;
     if (pin2 == null || pin2.length != 4) return;
 
     // Check if PINs match
@@ -185,6 +206,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
     // Save PIN
     final success = await BiometricService.setPin(pin1);
+
+    if (!mounted) return;
 
     if (success) {
       setState(() => _pinEnabled = true);
@@ -205,9 +228,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       subtitle: 'Enter your current PIN',
     );
 
+    if (!mounted) return;
     if (oldPin == null || oldPin.length != 4) return;
 
     final isValid = await BiometricService.verifyPin(oldPin);
+
+    if (!mounted) return;
 
     if (!isValid) {
       _showErrorMessage('Incorrect PIN');
@@ -222,6 +248,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       isSetup: true,
     );
 
+    if (!mounted) return;
     if (newPin1 == null || newPin1.length != 4) return;
 
     // Confirm new PIN
@@ -232,6 +259,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       isSetup: true,
     );
 
+    if (!mounted) return;
     if (newPin2 == null || newPin2.length != 4) return;
 
     // Check if new PINs match
@@ -242,6 +270,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
     // Change PIN
     final success = await BiometricService.changePin(oldPin, newPin1);
+
+    if (!mounted) return;
 
     if (success) {
       _showSuccessMessage('PIN changed successfully');
@@ -261,9 +291,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       subtitle: 'Enter your current PIN to remove it',
     );
 
+    if (!mounted) return;
     if (pin == null || pin.length != 4) return;
 
     final isValid = await BiometricService.verifyPin(pin);
+
+    if (!mounted) return;
 
     if (!isValid) {
       _showErrorMessage('Incorrect PIN');
@@ -277,10 +310,13 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           'Are you sure you want to remove your PIN? This will disable PIN authentication for transactions.',
     );
 
+    if (!mounted) return;
     if (confirm != true) return;
 
     // Remove PIN
     final success = await BiometricService.removePin();
+
+    if (!mounted) return;
 
     if (success) {
       setState(() => _pinEnabled = false);
@@ -300,9 +336,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           'This will remove your stored login credentials. You will need to login with email and password to use biometric login again.',
     );
 
+    if (!mounted) return;
     if (confirm != true) return;
 
     final success = await BiometricService.clearBiometricCredentials();
+
+    if (!mounted) return;
 
     if (success) {
       setState(() => _hasStoredCredentials = false);
@@ -338,6 +377,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   void _showSuccessMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -348,6 +388,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   void _showErrorMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
