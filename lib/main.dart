@@ -10,7 +10,6 @@ import 'package:app_wallet/screens/dashboard_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Stripe
   PaymentService.initializeStripe(
     'pk_test_51SXvBHHKrFDpSpIkVxuXl5nyLySIPsmOBh6EOuy8Ih2xXqdFY3KdaSy0ga75PTjAEpG3wQtaGfKZFnyLr0WOwFD5002qz17NV2',
   );
@@ -25,7 +24,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ✅ ONLY THREE PROVIDERS - UserProvider REMOVED
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
@@ -59,17 +57,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ FIX: Wait for the frame to finish building before running auth logic
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthStatus();
     });
   }
 
   Future<void> _checkAuthStatus() async {
-    // Use 'listen: false' when calling methods inside functions to be safe
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    // Check authentication status
     final isAuthenticated = await auth.checkAuthStatus();
 
     if (!mounted) return;

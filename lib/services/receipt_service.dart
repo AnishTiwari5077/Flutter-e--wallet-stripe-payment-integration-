@@ -9,16 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 
 class ReceiptService {
-  /// Generate receipt and show options
   static Future<void> showReceiptOptions(
     BuildContext context,
     TransactionReceipt receipt,
   ) async {
     try {
-      // Generate PDF
       final pdfFile = await PdfService.generateReceipt(receipt);
-
-      // Show options dialog
       if (context.mounted) {
         await showModalBottomSheet(
           context: context,
@@ -41,7 +37,6 @@ class ReceiptService {
     }
   }
 
-  /// Build options bottom sheet
   static Widget _buildOptionsSheet(
     BuildContext context,
     File pdfFile,
@@ -52,7 +47,6 @@ class ReceiptService {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
             width: 40,
             height: 4,
@@ -202,18 +196,15 @@ class ReceiptService {
     }
   }
 
-  /// Download receipt to Downloads folder
   static Future<void> downloadReceipt(
     BuildContext context,
     File pdfFile,
   ) async {
     try {
-      // Request storage permission
       final status = await Permission.storage.request();
 
       if (status.isGranted ||
           await Permission.manageExternalStorage.isGranted) {
-        // Get Downloads directory
         Directory? downloadsDir;
 
         if (Platform.isAndroid) {
@@ -266,14 +257,9 @@ class ReceiptService {
     }
   }
 
-  /// Share receipt via share sheet
-  /// ✅ PROPERLY FIXED: Using SharePlus.instance.share() with new API
   static Future<void> shareReceipt(BuildContext context, File pdfFile) async {
     try {
-      // Get the box for share position origin (optional but good UX)
       final box = context.findRenderObject() as RenderBox?;
-
-      // Use the NEW SharePlus API
       final shareResult = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(pdfFile.path)],
@@ -284,8 +270,6 @@ class ReceiptService {
               : null,
         ),
       );
-
-      // Optional: Show result feedback
       if (context.mounted && shareResult.status == ShareResultStatus.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

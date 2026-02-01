@@ -8,9 +8,6 @@ class PaymentService {
     Stripe.publishableKey = publishableKey;
   }
 
-  // ============================================
-  // DEPOSIT MONEY (STRIPE PAYMENT SHEET)
-  // ============================================
   static Future<Map<String, dynamic>> payWithPaymentSheet({
     required double amount,
     required int userId,

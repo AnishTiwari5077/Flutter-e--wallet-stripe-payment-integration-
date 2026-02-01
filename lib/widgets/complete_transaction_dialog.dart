@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Transaction types for the confirmation dialog
 enum TransactionType {
   deposit,
   sendMoney,
@@ -11,8 +10,6 @@ enum TransactionType {
   shopping,
 }
 
-/// Transaction Confirmation Dialog
-/// Shows a beautiful confirmation dialog before any transaction
 class TransactionConfirmationDialog extends StatelessWidget {
   final TransactionType type;
   final double amount;
@@ -28,8 +25,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
     required this.onConfirm,
     this.onCancel,
   });
-
-  /// Get transaction icon based on type
   IconData _getIcon() {
     switch (type) {
       case TransactionType.deposit:
@@ -49,7 +44,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
     }
   }
 
-  /// Get transaction color based on type
   Color _getColor() {
     switch (type) {
       case TransactionType.deposit:
@@ -69,7 +63,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
     }
   }
 
-  /// Get transaction title
   String _getTitle() {
     switch (type) {
       case TransactionType.deposit:
@@ -89,7 +82,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
     }
   }
 
-  /// Get confirmation message
   String _getMessage() {
     switch (type) {
       case TransactionType.deposit:
@@ -191,8 +183,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                // Additional Details
                 if (details != null && details!.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Container(
@@ -236,8 +226,6 @@ class TransactionConfirmationDialog extends StatelessWidget {
                 ],
 
                 const SizedBox(height: 24),
-
-                // Warning for non-deposit transactions
                 if (type != TransactionType.deposit) ...[
                   Container(
                     padding: const EdgeInsets.all(12),

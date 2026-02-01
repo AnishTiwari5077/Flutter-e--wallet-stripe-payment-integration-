@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 class PinInputDialog extends StatefulWidget {
   final String title;
   final String subtitle;
-  final bool isSetup; // true for setting up new PIN, false for verifying
+  final bool isSetup;
   final Function(String) onPinEntered;
 
   const PinInputDialog({
@@ -50,7 +50,6 @@ class _PinInputDialogState extends State<PinInputDialog> {
   @override
   void initState() {
     super.initState();
-    // Auto-focus first field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNodes[0].requestFocus();
     });
@@ -69,7 +68,6 @@ class _PinInputDialogState extends State<PinInputDialog> {
 
   void _onPinDigitChanged(int index, String value) {
     if (value.isEmpty) {
-      // Handle backspace - move to previous field
       if (index > 0) {
         _focusNodes[index - 1].requestFocus();
       }
@@ -77,11 +75,9 @@ class _PinInputDialogState extends State<PinInputDialog> {
     }
 
     if (value.length == 1) {
-      // Move to next field
       if (index < 3) {
         _focusNodes[index + 1].requestFocus();
       } else {
-        // All 4 digits entered
         _handlePinComplete();
       }
     }
@@ -102,8 +98,6 @@ class _PinInputDialogState extends State<PinInputDialog> {
       });
       return;
     }
-
-    // Validate all digits are numbers
     if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
       setState(() {
         _errorMessage = 'PIN must contain only numbers';
@@ -163,24 +157,18 @@ class _PinInputDialogState extends State<PinInputDialog> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-
-            // Subtitle
             Text(
               widget.subtitle,
               style: TextStyle(color: Colors.grey[400], fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-
-            // PIN Input Fields
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(4, (index) {
                 return _buildPinField(index);
               }),
             ),
-
-            // Error Message
             if (_errorMessage.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(
@@ -239,8 +227,6 @@ class _PinInputDialogState extends State<PinInputDialog> {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // Clear Button
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _clearPin,

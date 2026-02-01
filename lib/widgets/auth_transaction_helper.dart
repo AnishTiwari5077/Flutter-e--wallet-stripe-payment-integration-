@@ -3,21 +3,14 @@ import 'package:app_wallet/services/biometric_service.dart';
 import 'package:app_wallet/widgets/pin_input_dialog.dart';
 
 class TransactionAuthHelper {
-  /// Authenticate user before transaction
-  /// Returns true if authenticated, false otherwise
   static Future<bool> authenticate(BuildContext context) async {
     try {
-      // Check if biometric is enabled for transactions
       final biometricEnabled =
           await BiometricService.isBiometricEnabledForTransactions();
       final pinEnabled = await BiometricService.isPinSet();
-
-      // If neither is enabled, allow transaction
       if (!biometricEnabled && !pinEnabled) {
         return true;
       }
-
-      // Try biometric first if enabled
       if (biometricEnabled) {
         final biometricSuccess =
             await BiometricService.authenticateWithBiometric(
@@ -27,8 +20,6 @@ class TransactionAuthHelper {
         if (biometricSuccess) {
           return true;
         }
-
-        // If biometric failed and PIN is not set, return false
         if (!pinEnabled) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -41,8 +32,6 @@ class TransactionAuthHelper {
           }
           return false;
         }
-
-        // If biometric failed but PIN is available, ask user
         if (context.mounted) {
           final usePinInstead = await showDialog<bool>(
             context: context,
@@ -77,8 +66,6 @@ class TransactionAuthHelper {
           }
         }
       }
-
-      // Use PIN authentication
       if (pinEnabled) {
         if (!context.mounted) return false;
 
@@ -87,9 +74,7 @@ class TransactionAuthHelper {
           title: 'Confirm Transaction',
           subtitle: 'Enter your PIN to confirm',
         );
-
         if (pin == null) {
-          // User cancelled
           return false;
         }
 
@@ -110,11 +95,8 @@ class TransactionAuthHelper {
 
         return true;
       }
-
-      // No authentication method available
       return true;
     } catch (e) {
-      //  print('Authentication error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -128,7 +110,6 @@ class TransactionAuthHelper {
     }
   }
 
-  /// Show authentication required dialog
   static Future<void> showAuthRequiredDialog(BuildContext context) async {
     await showDialog(
       context: context,
@@ -165,8 +146,6 @@ class TransactionAuthHelper {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to security settings
-              // This should be implemented based on your navigation setup
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.purpleAccent,

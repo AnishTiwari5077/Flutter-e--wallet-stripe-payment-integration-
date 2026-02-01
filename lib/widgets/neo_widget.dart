@@ -61,8 +61,6 @@ class NeonBalanceCard extends StatelessWidget {
                   ),
                 ],
               ),
-
-              // Profile Avatar - Tappable
               GestureDetector(
                 onTap: () {
                   showDialog(
