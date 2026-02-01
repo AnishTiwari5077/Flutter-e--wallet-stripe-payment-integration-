@@ -18,7 +18,7 @@ class ApiService {
   // Debug print helper
   static void _debugPrint(String message) {
     if (debugMode) {
-      print(message);
+      //   print(message);
     }
   }
 
