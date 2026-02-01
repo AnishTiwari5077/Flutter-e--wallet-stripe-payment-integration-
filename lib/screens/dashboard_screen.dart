@@ -16,6 +16,8 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isLoggingOut = false; // NEW: Track logout state
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +49,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final transactionProvider = context.watch<TransactionProvider>();
     final user = auth.user;
 
+    // Show loading during logout to prevent session expired flash
+    if (_isLoggingOut) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF080814),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.purpleAccent),
+              SizedBox(height: 16),
+              Text(
+                'Logging out...',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Loading State
     if (auth.loading) {
       return const Scaffold(
@@ -55,45 +77,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // No User State
-    if (user == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF080814),
+    // No User State - But only show if NOT logging out
+    if (user == null && !_isLoggingOut) {
+      // Automatically navigate to login instead of showing error
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      });
+
+      // Show minimal loading screen while navigating
+      return const Scaffold(
+        backgroundColor: Color(0xFF080814),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 60),
-              const SizedBox(height: 16),
-              const Text(
-                'Session Expired',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please login again',
-                style: TextStyle(color: Colors.grey[400]),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/login');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purpleAccent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text('Go to Login'),
-              ),
-            ],
-          ),
+          child: CircularProgressIndicator(color: Colors.purpleAccent),
         ),
       );
     }
@@ -135,52 +132,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.history, color: Colors.white),
             tooltip: 'Transaction History',
           ),
-          // Logout Icon
+          // Logout Icon - IMPROVED
           IconButton(
             onPressed: () async {
-              await auth.logout();
+              // Show confirmation dialog
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF1A1A2E),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    'Are you sure you want to logout?',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purpleAccent,
+                      ),
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm != true) return;
               if (!mounted) return;
-              Navigator.pushReplacementNamed(context, '/login');
+
+              // Set logout state to prevent error screen
+              setState(() {
+                _isLoggingOut = true;
+              });
+
+              // Clear auth state
+              await auth.logout();
+
+              // Navigate immediately
+              if (!mounted) return;
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
             },
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await auth.refreshUser();
-          if (!mounted) return;
-          if (user.id != null) {
-            await transactionProvider.refreshTransactions(user.id!);
-          }
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
+      body: user == null
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () async {
+                await auth.refreshUser();
+                if (!mounted) return;
+                if (user.id != null) {
+                  await transactionProvider.refreshTransactions(user.id!);
+                }
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
 
-              // Balance Card
-              NeonBalanceCard(
-                name: user.name,
-                avatarUrl: user.avatar,
-                balance: user.balance,
+                    // Balance Card
+                    NeonBalanceCard(
+                      name: user.name,
+                      avatarUrl: user.avatar,
+                      balance: user.balance,
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Services Section
+                    _buildServicesSection(),
+
+                    const SizedBox(height: 30),
+
+                    // Recent Transactions Section
+                    _buildRecentTransactionsSection(
+                      transactionProvider,
+                      user.id!,
+                    ),
+                  ],
+                ),
               ),
-
-              const SizedBox(height: 30),
-
-              // Services Section
-              _buildServicesSection(),
-
-              const SizedBox(height: 30),
-
-              // Recent Transactions Section
-              _buildRecentTransactionsSection(transactionProvider, user.id!),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 

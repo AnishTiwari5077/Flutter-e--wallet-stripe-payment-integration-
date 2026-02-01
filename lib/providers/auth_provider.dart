@@ -106,19 +106,23 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ============================================
-  // LOGOUT
+  // LOGOUT - IMPROVED TO PREVENT GLITCHES
   // ============================================
   Future<void> logout() async {
+    // Clear user state immediately to prevent glitches
     _user = null;
     _errorMessage = null;
+    _loading = false;
 
-    // Clear user data from local storage
-    // await _clearUserFromLocal();
-
-    // Clear biometric credentials
-    // await BiometricService.clearBiometricCredentials();
-
+    // Notify listeners immediately so UI updates right away
     notifyListeners();
+
+    // Clear local storage in background (don't await to avoid delays)
+    _clearUserFromLocal();
+
+    // Optionally clear biometric credentials
+    // Uncomment if you want to clear credentials on logout
+    // BiometricService.clearBiometricCredentials();
   }
 
   // ============================================
