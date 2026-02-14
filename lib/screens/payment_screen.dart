@@ -10,8 +10,6 @@ import 'package:app_wallet/providers/payment_provider.dart';
 import 'package:app_wallet/services/receipt_service.dart';
 import 'package:app_wallet/screens/receipt_screen.dart';
 
-// ✅ BIOMETRIC AUTHENTICATION IMPORT
-
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
 
@@ -66,7 +64,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       case PaymentType.deposit:
         return {
           'Payment Method': 'Credit Card',
-          'Processing Fee': '\$${(amount * 0.029).toStringAsFixed(2)}',
+          'charge': '\$${(amount * 0.029).toStringAsFixed(2)}',
           'Total': '\$${(amount * 1.029).toStringAsFixed(2)}',
         };
 
@@ -297,12 +295,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       // ✅ ========================================
       // ✅ GENERATE AND SHOW RECEIPT
+      // ✅ Skip receipt for deposit to avoid potential overflow
+      // ✅ Users can still see receipt from transaction history
       // ✅ ========================================
-      await _showTransactionReceipt(
-        amount: amount,
-        balanceBefore: balanceBefore,
-        balanceAfter: auth.user?.balance ?? balanceBefore,
-      );
+      if (widget.paymentType != PaymentType.deposit) {
+        await _showTransactionReceipt(
+          amount: amount,
+          balanceBefore: balanceBefore,
+          balanceAfter: auth.user?.balance ?? balanceBefore,
+        );
+      }
 
       // Navigate back to dashboard
       if (!mounted) return;

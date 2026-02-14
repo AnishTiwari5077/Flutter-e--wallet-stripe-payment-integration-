@@ -232,7 +232,7 @@ class PdfService {
           if (receipt.processingFee != null) ...[
             _buildAmountRow('Amount', receipt.amount),
             pw.SizedBox(height: 8),
-            _buildAmountRow('Processing Fee', receipt.processingFee!),
+            _buildAmountRow('charge', receipt.processingFee!),
             pw.Divider(thickness: 1, color: PdfColors.grey400),
           ],
           _buildAmountRow(
