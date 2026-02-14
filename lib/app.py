@@ -16,13 +16,13 @@ CORS(app)
 # Stripe API Key (Using environment variable is safer in production)
 # Accessing env vars directly now
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", 
-    "sk_test_51SXvBHHKrFDpSpIkXW5NilPDcDxBcv2NA7D5jnWyfS2fIAZJ0TNK331jUlrQbiC6dy9Habi5zAKvTIJL0xhVynO8000h65209I")
+    "your stripe secret key")
 
 # Database configuration (Ensure these match your MySQL setup)
 # Accessing env vars directly now
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "Aaa123@@@")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "your password")
 DB_NAME = os.environ.get("DB_NAME", "ewallet")
 
 # ---------------- DB CONNECTION ----------------
@@ -640,4 +640,5 @@ def test_db():
         conn.close()
 
 if __name__ == "__main__":
+
     app.run(host="0.0.0.0", port=5000, debug=True)
