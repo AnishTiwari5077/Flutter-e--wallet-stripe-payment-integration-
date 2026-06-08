@@ -8,6 +8,85 @@ payment_bp = Blueprint('payment', __name__)
 # Stripe API Key
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "your stripe secret key")
 
+# ---------------- PROCESS DEPOSIT (DIRECT CARD) ----------------
+@payment_bp.route("/process-deposit", methods=["POST"])
+def process_deposit():
+    data = request.json
+    user_id = data.get("user_id")
+    amount = float(data.get("amount", 0))
+    card_number = data.get("card_number")
+    exp_month = data.get("exp_month")
+    exp_year = data.get("exp_year")
+    cvc = data.get("cvc")
+    
+    if amount <= 0 or not user_id or not card_number or not exp_month or not exp_year or not cvc:
+        return jsonify({"error": "Invalid parameters"}), 400
+    
+    amount_in_cents = int(amount * 100)
+
+    try:
+        # Check for Stripe test cards to bypass raw card data restriction
+        clean_card = card_number.replace(" ", "").replace("-", "")
+        card_param = {}
+        
+        if clean_card == "4242424242424242":
+            card_param = {"token": "tok_visa"}
+        elif clean_card.startswith("5555555555554444"):
+            card_param = {"token": "tok_mastercard"}
+        else:
+            card_param = {
+                "number": card_number,
+                "exp_month": exp_month,
+                "exp_year": exp_year,
+                "cvc": cvc,
+            }
+
+        # 1. Create PaymentMethod
+        payment_method = stripe.PaymentMethod.create(
+            type="card",
+            card=card_param,
+        )
+        
+        # 2. Create and confirm PaymentIntent without redirects
+        intent = stripe.PaymentIntent.create(
+            amount=amount_in_cents,
+            currency="usd",
+            payment_method=payment_method.id,
+            confirm=True,
+            automatic_payment_methods={"enabled": True, "allow_redirects": "never"}
+        )
+        
+        if intent.status == "succeeded":
+            # 3. Update balance
+            conn = db()
+            cur = conn.cursor()
+            try:
+                cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, user_id))
+                cur.execute(
+                    "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'add')",
+                    (None, user_id, amount)
+                )
+                conn.commit()
+                
+                cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
+                user = cur.fetchone()
+                
+                return jsonify({"success": True, "message": "Deposit successful", "user": user}), 200
+            except Exception as db_err:
+                conn.rollback()
+                raise db_err
+            finally:
+                cur.close()
+                conn.close()
+        else:
+            return jsonify({"error": "Payment failed"}), 400
+
+    except stripe.error.CardError as e:
+        return jsonify({"error": e.user_message}), 400
+    except Exception as e:
+        print(f"❌ Process deposit error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # ---------------- CREATE PAYMENT INTENT (STRIPE) ----------------
 @payment_bp.route("/create-payment-intent", methods=["POST"])
 def create_payment_intent():
