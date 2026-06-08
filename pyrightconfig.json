@@ -1,0 +1,7 @@
+{
+    "venvPath": "python",
+    "venv": "venv",
+    "extraPaths": [
+        "python"
+    ]
+}

@@ -8,7 +8,7 @@ class ApiService {
 
   // static const String _baseUrl = 'http://192.168.1.65:5000';
   //static const String _baseUrl = 'http://192.168.1.79:5000';
-  static const String _baseUrl = 'http://192.168.1.79:5000';
+  static const String _baseUrl = 'http://192.168.1.8:5000';
   // Debug mode flag - set to false to disable all debug prints
   static bool debugMode = true;
 
