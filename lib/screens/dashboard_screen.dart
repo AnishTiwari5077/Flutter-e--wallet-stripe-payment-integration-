@@ -176,7 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               await auth.logout();
 
               // Navigate immediately
-              if (!mounted) return;
+              if (!context.mounted) return;
 
               Navigator.pushNamedAndRemoveUntil(
                 context,
