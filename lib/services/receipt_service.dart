@@ -1,6 +1,6 @@
 // lib/services/receipt_service.dart
 import 'dart:io';
-import 'package:app_wallet/models/transaction_reciept_model.dart';
+import 'package:app_wallet/domain/entities/transaction_entity.dart';
 import 'package:app_wallet/services/pdf_services.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -11,7 +11,7 @@ import 'package:printing/printing.dart';
 class ReceiptService {
   static Future<void> showReceiptOptions(
     BuildContext context,
-    TransactionReceipt receipt,
+    TransactionEntity receipt,
   ) async {
     try {
       final pdfFile = await PdfService.generateReceipt(receipt);
@@ -40,7 +40,7 @@ class ReceiptService {
   static Widget _buildOptionsSheet(
     BuildContext context,
     File pdfFile,
-    TransactionReceipt receipt,
+    TransactionEntity receipt,
   ) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -294,7 +294,7 @@ class ReceiptService {
   /// Print receipt
   static Future<void> printReceipt(
     BuildContext context,
-    TransactionReceipt receipt,
+    TransactionEntity receipt,
   ) async {
     try {
       final pdfFile = await PdfService.generateReceipt(receipt);
@@ -317,7 +317,7 @@ class ReceiptService {
   }
 
   /// Create receipt from transaction data
-  static TransactionReceipt createReceiptFromTransaction(
+  static TransactionEntity createReceiptFromTransaction(
     Map<String, dynamic> transactionData,
     String userName,
     String userEmail,
@@ -325,7 +325,7 @@ class ReceiptService {
     double? balanceBefore,
     double? balanceAfter,
   ) {
-    return TransactionReceipt(
+    return TransactionEntity(
       transactionId:
           transactionData['transaction_id']?.toString() ??
           DateTime.now().millisecondsSinceEpoch.toString(),
