@@ -1,9 +1,10 @@
+import 'package:app_wallet/domain/entities/transaction_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_wallet/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:app_wallet/presentation/viewmodels/transaction_viewmodel.dart';
+import 'package:app_wallet/services/receipt_service.dart';
 import 'package:app_wallet/presentation/views/receipt_screen.dart';
-import 'package:app_wallet/domain/entities/transaction_entity.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -29,7 +30,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     });
   }
 
-  List<TransactionEntity> _filterTransactions(List<TransactionEntity> transactions, int userId) {
+  List<TransactionEntity> _filterTransactions(
+    List<TransactionEntity> transactions,
+    int userId,
+  ) {
     if (_filterType == 'all') return transactions;
 
     return transactions.where((tx) {

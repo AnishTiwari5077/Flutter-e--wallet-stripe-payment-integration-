@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:app_wallet/domain/entities/transaction_entity.dart';
 
@@ -88,26 +89,49 @@ class TransactionModel extends TransactionEntity {
   }
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    DateTime parsedDate;
+    try {
+      final dateStr = json['created_at'] ?? json['date_time'];
+      if (dateStr != null) {
+        try {
+          parsedDate = DateTime.parse(dateStr.toString());
+        } catch (_) {
+          // Fallback for RFC 1123 dates returned by Python Flask's jsonify
+          try {
+            parsedDate = HttpDate.parse(dateStr.toString());
+          } catch (_) {
+            parsedDate = DateTime.now();
+          }
+        }
+      } else {
+        parsedDate = DateTime.now();
+      }
+    } catch (e) {
+      parsedDate = DateTime.now();
+    }
+
     return TransactionModel(
       transactionId: json['transaction_id']?.toString() ?? '',
       transactionType: json['type'] ?? '',
-      dateTime: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      dateTime: parsedDate,
       amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
       status: json['status'] ?? 'Completed',
-      senderId: json['sender_id'],
-      senderName: json['sender_name'],
-      senderEmail: json['sender_email'],
-      senderPhone: json['sender_phone'],
-      receiverId: json['receiver_id'],
-      receiverName: json['receiver_name'],
-      receiverEmail: json['receiver_email'],
-      receiverPhone: json['receiver_phone'],
+      senderId: json['sender_id'] is int 
+          ? json['sender_id'] 
+          : int.tryParse(json['sender_id']?.toString() ?? ''),
+      senderName: json['sender_name']?.toString(),
+      senderEmail: json['sender_email']?.toString(),
+      senderPhone: json['sender_phone']?.toString(),
+      receiverId: json['receiver_id'] is int 
+          ? json['receiver_id'] 
+          : int.tryParse(json['receiver_id']?.toString() ?? ''),
+      receiverName: json['receiver_name']?.toString(),
+      receiverEmail: json['receiver_email']?.toString(),
+      receiverPhone: json['receiver_phone']?.toString(),
       balanceBefore: double.tryParse(json['balance_before']?.toString() ?? '0'),
       balanceAfter: double.tryParse(json['balance_after']?.toString() ?? '0'),
-      referenceNumber: json['reference_number'],
-      description: json['description'],
+      referenceNumber: json['reference_number']?.toString(),
+      description: json['description']?.toString(),
     );
   }
 
