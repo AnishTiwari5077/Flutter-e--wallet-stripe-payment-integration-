@@ -1,6 +1,6 @@
 // lib/services/pdf_service.dart
 import 'dart:io';
-import 'package:app_wallet/models/transaction_reciept_model.dart';
+import 'package:app_wallet/domain/entities/transaction_entity.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 
 class PdfService {
   /// Generate a professional PDF receipt
-  static Future<File> generateReceipt(TransactionReceipt receipt) async {
+  static Future<File> generateReceipt(TransactionEntity receipt) async {
     final pdf = pw.Document();
 
     // Add page to PDF
@@ -115,7 +115,7 @@ class PdfService {
   }
 
   /// Build receipt title
-  static pw.Widget _buildTitle(TransactionReceipt receipt) {
+  static pw.Widget _buildTitle(TransactionEntity receipt) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -160,7 +160,7 @@ class PdfService {
   }
 
   /// Build transaction details section
-  static pw.Widget _buildTransactionDetails(TransactionReceipt receipt) {
+  static pw.Widget _buildTransactionDetails(TransactionEntity receipt) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
@@ -191,7 +191,7 @@ class PdfService {
   }
 
   /// Build additional details section
-  static pw.Widget _buildAdditionalDetails(TransactionReceipt receipt) {
+  static pw.Widget _buildAdditionalDetails(TransactionEntity receipt) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
@@ -220,7 +220,7 @@ class PdfService {
   }
 
   /// Build amount summary section
-  static pw.Widget _buildAmountSummary(TransactionReceipt receipt) {
+  static pw.Widget _buildAmountSummary(TransactionEntity receipt) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
@@ -246,7 +246,7 @@ class PdfService {
   }
 
   /// Build balance information section
-  static pw.Widget _buildBalanceInfo(TransactionReceipt receipt) {
+  static pw.Widget _buildBalanceInfo(TransactionEntity receipt) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
@@ -374,7 +374,7 @@ class PdfService {
   }
 
   /// Get output file path
-  static Future<File> _getOutputFile(TransactionReceipt receipt) async {
+  static Future<File> _getOutputFile(TransactionEntity receipt) async {
     final directory = await getApplicationDocumentsDirectory();
     final fileName =
         'receipt_${receipt.transactionId}_${DateTime.now().millisecondsSinceEpoch}.pdf';
