@@ -172,6 +172,51 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> processDeposit({
+    required int userId,
+    required double amount,
+    required String cardNumber,
+    required String expMonth,
+    required String expYear,
+    required String cvc,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/process-deposit'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'amount': amount,
+          'card_number': cardNumber,
+          'exp_month': expMonth,
+          'exp_year': expYear,
+          'cvc': cvc,
+        }),
+      );
+
+      _debugPrint('Process Deposit Status: ${res.statusCode}');
+      _debugPrint('Process Deposit Response: ${res.body}');
+
+      final body = jsonDecode(res.body);
+
+      if (res.statusCode == 200) {
+        return {
+          'success': true,
+          'user': body['user'] != null ? User.fromJson(body['user']) : null,
+          'message': body['message'] ?? 'Deposit successful',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': body['error'] ?? 'Failed to process deposit',
+      };
+    } catch (e) {
+      _debugPrint('Process Deposit Error: $e');
+      return {'success': false, 'message': 'Connection error: $e'};
+    }
+  }
+
   static Future<String?> createPaymentIntent(double amount) async {
     try {
       final res = await http.post(

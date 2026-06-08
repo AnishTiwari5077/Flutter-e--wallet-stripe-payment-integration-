@@ -9,6 +9,7 @@ import 'package:app_wallet/providers/payment_provider.dart';
 // ✅ RECEIPT IMPORTS
 import 'package:app_wallet/services/receipt_service.dart';
 import 'package:app_wallet/screens/receipt_screen.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
@@ -26,6 +27,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _accountController = TextEditingController();
   final _nameController = TextEditingController();
   final _extraController = TextEditingController();
+  
+  // Custom Card Fields
+  final _cardNumberController = TextEditingController();
+  final _expMonthController = TextEditingController();
+  final _expYearController = TextEditingController();
+  final _cvcController = TextEditingController();
 
   @override
   void dispose() {
@@ -34,6 +41,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _accountController.dispose();
     _nameController.dispose();
     _extraController.dispose();
+    _cardNumberController.dispose();
+    _expMonthController.dispose();
+    _expYearController.dispose();
+    _cvcController.dispose();
     super.dispose();
   }
 
@@ -197,6 +208,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         result = await paymentProvider.depositMoney(
           userId: user.id!,
           amount: amount,
+          cardNumber: _cardNumberController.text.trim(),
+          expMonth: _expMonthController.text.trim(),
+          expYear: _expYearController.text.trim(),
+          cvc: _cvcController.text.trim(),
         );
         success = result['success'] == true;
 
@@ -549,36 +564,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
 
               const SizedBox(height: 20),
-              if (widget.paymentType == PaymentType.deposit)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.blue.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'You will be redirected to Stripe payment page',
-                          style: TextStyle(
-                            color: Colors.grey[300],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),
@@ -598,6 +583,49 @@ class _PaymentScreenState extends State<PaymentScreen> {
             hint: 'Enter amount',
             prefix: '\$ ',
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Card Details',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          _buildTextField(
+            controller: _cardNumberController,
+            label: 'Card Number',
+            hint: '1234 5678 9101 1121',
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _expMonthController,
+                  label: 'MM',
+                  hint: '12',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildTextField(
+                  controller: _expYearController,
+                  label: 'YY or YYYY',
+                  hint: '2025',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildTextField(
+                  controller: _cvcController,
+                  label: 'CVC',
+                  hint: '123',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
           ),
         ]);
         break;

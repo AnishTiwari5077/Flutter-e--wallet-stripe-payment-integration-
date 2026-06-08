@@ -1,5 +1,5 @@
 import 'package:app_wallet/services/api_services.dart';
-import 'package:flutter/material.dart';
+//import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 class PaymentService {
@@ -8,7 +8,7 @@ class PaymentService {
     Stripe.publishableKey = publishableKey;
   }
 
-  static Future<Map<String, dynamic>> payWithPaymentSheet({
+  static Future<Map<String, dynamic>> processDepositPayment({
     required double amount,
     required int userId,
   }) async {
@@ -17,8 +17,6 @@ class PaymentService {
         return {'success': false, 'message': 'Amount must be greater than 0'};
       }
 
-      //     print('Starting Stripe payment for \$$amount');
-
       // Step 1: Create payment intent from backend
       final clientSecret = await ApiService.createPaymentIntent(amount);
 
@@ -26,29 +24,18 @@ class PaymentService {
         return {'success': false, 'message': 'Failed to create payment intent'};
       }
 
-      // print('Payment intent created, initializing payment sheet...');
-
-      // Step 2: Initialize payment sheet
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'E-Wallet App',
-          style: ThemeMode.system,
+      // Step 2: Confirm payment with the card details already entered in CardField
+      await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: clientSecret,
+        data: const PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(),
         ),
       );
 
-      //    print('Payment sheet initialized, presenting to user...');
-
-      // Step 3: Present payment sheet to user
-      await Stripe.instance.presentPaymentSheet();
-
-      //   print('Payment completed, updating balance...');
-
-      // Step 4: Update balance in backend after successful payment
+      // Step 3: Update balance in backend after successful payment
       final updateResult = await ApiService.updateBalance(userId, amount);
 
       if (updateResult['success'] == true) {
-        // print('Balance updated successfully');
         return {
           'success': true,
           'message': updateResult['message'] ?? 'Payment successful!',
@@ -61,8 +48,6 @@ class PaymentService {
         };
       }
     } on StripeException catch (e) {
-      //   print('Stripe Error: ${e.error.message}');
-
       String errorMessage = 'Payment failed';
 
       if (e.error.code == FailureCode.Canceled) {
@@ -77,7 +62,6 @@ class PaymentService {
 
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      //  print('Payment Error: $e');
       return {'success': false, 'message': 'An unexpected error occurred: $e'};
     }
   }

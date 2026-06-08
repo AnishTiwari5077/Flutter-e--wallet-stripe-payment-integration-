@@ -24,14 +24,22 @@ class PaymentProvider with ChangeNotifier {
   Future<Map<String, dynamic>> depositMoney({
     required int userId,
     required double amount,
+    required String cardNumber,
+    required String expMonth,
+    required String expYear,
+    required String cvc,
   }) async {
     _setLoading(true);
     _clearMessages();
 
     try {
-      final result = await PaymentService.payWithPaymentSheet(
-        amount: amount,
+      final result = await ApiService.processDeposit(
         userId: userId,
+        amount: amount,
+        cardNumber: cardNumber,
+        expMonth: expMonth,
+        expYear: expYear,
+        cvc: cvc,
       );
 
       _setLoading(false);
