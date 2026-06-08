@@ -3,10 +3,10 @@ import os
 
 # Database configuration (Ensure these match your MySQL setup)
 # Accessing env vars directly now
-DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_HOST = os.environ.get("DB_HOST", "")
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "your password")
-DB_NAME = os.environ.get("DB_NAME", "ewallet")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+DB_NAME = os.environ.get("DB_NAME", "")
 
 def db():
     """Establishes a connection to the MySQL database."""

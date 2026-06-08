@@ -3,3 +3,4 @@ Flask-Cors
 PyMySQL
 bcrypt
 stripe
+python-dotenv
