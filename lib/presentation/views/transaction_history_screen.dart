@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_wallet/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:app_wallet/presentation/viewmodels/transaction_viewmodel.dart';
-import 'package:app_wallet/services/receipt_service.dart';
+
 import 'package:app_wallet/presentation/views/receipt_screen.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {

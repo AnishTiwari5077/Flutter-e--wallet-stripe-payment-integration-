@@ -91,6 +91,7 @@ try:
                 ) NOT NULL,
                 status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'completed',
                 reference_id VARCHAR(100) UNIQUE,  -- For external references (Stripe, etc)
+                idempotency_key VARCHAR(100) UNIQUE, -- Prevent double charges on retries
                 metadata JSON,  -- Store additional transaction details
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

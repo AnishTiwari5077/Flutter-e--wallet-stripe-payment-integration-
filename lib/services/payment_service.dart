@@ -1,9 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 class PaymentService {
   // Initialize Stripe - call this in main.dart before runApp()
-  static void initializeStripe(String publishableKey) {
-    Stripe.publishableKey = publishableKey;
+  static Future<void> initializeStripe(String publishableKey) async {
+    try {
+      Stripe.publishableKey = publishableKey;
+      await Stripe.instance.applySettings();
+    } catch (e) {
+      debugPrint('Stripe initialization failed: $e');
+    }
   }
 
   // ============================================

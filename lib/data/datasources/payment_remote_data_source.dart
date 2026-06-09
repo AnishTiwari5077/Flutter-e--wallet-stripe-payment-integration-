@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:app_wallet/core/network/api_client.dart';
 import 'package:app_wallet/data/models/user_model.dart';
 import 'package:app_wallet/core/error/failures.dart';
+import 'package:uuid/uuid.dart';
 
 abstract class PaymentRemoteDataSource {
   Future<UserModel> processDeposit({
@@ -58,6 +59,7 @@ abstract class PaymentRemoteDataSource {
 
 class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
   final ApiClient client;
+  final Uuid _uuid = const Uuid();
   PaymentRemoteDataSourceImpl(this.client);
 
   @override
@@ -76,7 +78,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'exp_month': expMonth,
       'exp_year': expYear,
       'cvc': cvc,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
@@ -98,7 +100,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'sender_id': senderId,
       'phone': receiverPhone,
       'amount': amount,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);
@@ -117,7 +119,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'account_number': accountNumber,
       'bank_name': bankName,
       'amount': amount,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);
@@ -138,7 +140,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'college_name': collegeName,
       'semester': semester,
       'amount': amount,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);
@@ -157,7 +159,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'phone_number': phoneNumber,
       'operator': operator,
       'amount': amount,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);
@@ -176,7 +178,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'bill_type': billType,
       'account_number': accountNumber,
       'amount': amount,
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);
@@ -195,7 +197,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
       'merchant_name': merchantName,
       'amount': amount,
       'items': items ?? [],
-    });
+    }, headers: {'Idempotency-Key': _uuid.v4()});
     
     if (response.statusCode == 200) return true;
     final body = jsonDecode(response.body);

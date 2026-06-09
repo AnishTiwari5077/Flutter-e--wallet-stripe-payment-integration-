@@ -2,6 +2,8 @@ import 'package:app_wallet/domain/entities/user_entity.dart';
 import 'package:app_wallet/domain/repositories/payment_repository.dart';
 import 'package:app_wallet/data/datasources/payment_remote_data_source.dart';
 import 'package:app_wallet/core/error/failures.dart';
+import 'dart:async';
+import 'dart:io';
 
 class PaymentRepositoryImpl implements PaymentRepository {
   final PaymentRemoteDataSource remoteDataSource;
@@ -26,10 +28,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         expYear: expYear,
         cvc: cvc,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -45,10 +51,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         receiverPhone: receiverPhone,
         amount: amount,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -66,10 +76,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         bankName: bankName,
         amount: amount,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -89,10 +103,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         semester: semester,
         amount: amount,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -110,10 +128,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         operator: operator,
         amount: amount,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -131,10 +153,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         accountNumber: accountNumber,
         amount: amount,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -152,10 +178,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         amount: amount,
         items: items,
       );
+    } on SocketException {
+      throw const NetworkFailure('No internet connection. Please check your network and try again.');
+    } on TimeoutException {
+      throw const NetworkFailure('Payment request timed out. Please verify if the payment went through before trying again.');
     } on Failure {
       rethrow;
     } catch (e) {
-      throw ServerFailure(e.toString());
+      throw ServerFailure('An unexpected error occurred: ${e.toString()}');
     }
   }
 }
