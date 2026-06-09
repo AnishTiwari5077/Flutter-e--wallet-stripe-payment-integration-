@@ -11,6 +11,8 @@ import 'package:app_wallet/services/receipt_service.dart';
 import 'package:app_wallet/presentation/views/receipt_screen.dart';
 
 
+import 'package:uuid/uuid.dart';
+
 class PaymentScreen extends StatefulWidget {
   final PaymentType paymentType;
 
@@ -33,6 +35,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _expMonthController = TextEditingController();
   final _expYearController = TextEditingController();
   final _cvcController = TextEditingController();
+
+  // UI guard: prevents double-tap while a payment is being processed
+  bool _isSubmitting = false;
+  // Idempotency key generated ONCE before the confirmation dialog
+  String? _pendingIdempotencyKey;
 
   @override
   void dispose() {
@@ -118,6 +125,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _handlePayment() async {
+    if (_isSubmitting) return; // local UI guard
     if (!_formKey.currentState!.validate()) return;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -175,6 +183,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    // Generate idempotency key ONCE before showing the confirmation dialog
+    _pendingIdempotencyKey = const Uuid().v4();
+
     // ============================================
     // ✅ STEP 2: SHOW CONFIRMATION DIALOG
     // ============================================
@@ -190,9 +201,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (confirmed != true) {
       if (!mounted) return;
+      _pendingIdempotencyKey = null;
       _showMessage('Transaction cancelled', isError: false);
       return;
     }
+
+    // Lock the UI — key was already generated before the dialog
+    setState(() => _isSubmitting = true);
+    final idempotencyKey = _pendingIdempotencyKey!;
+    _pendingIdempotencyKey = null;
 
     // ✅ CAPTURE BALANCE BEFORE TRANSACTION
     final balanceBefore = user.balance;
@@ -212,6 +229,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           expMonth: _expMonthController.text.trim(),
           expYear: _expYearController.text.trim(),
           cvc: _cvcController.text.trim(),
+          idempotencyKey: idempotencyKey,
         );
         success = result['success'] == true;
 
@@ -225,9 +243,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           senderId: user.id!,
           receiverPhone: _phoneController.text.trim(),
           amount: amount,
+          idempotencyKey: idempotencyKey,
         );
         if (success) {
-          auth.deductMoney(amount);
+          // Server is source of truth — just refresh, no local deduction
           await auth.refreshUser();
         }
         break;
@@ -238,9 +257,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           accountNumber: _accountController.text.trim(),
           bankName: _nameController.text.trim(),
           amount: amount,
+          idempotencyKey: idempotencyKey,
         );
         if (success) {
-          auth.deductMoney(amount);
           await auth.refreshUser();
         }
         break;
@@ -252,9 +271,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           collegeName: _nameController.text.trim(),
           amount: amount,
           semester: _extraController.text.trim(),
+          idempotencyKey: idempotencyKey,
         );
         if (success) {
-          auth.deductMoney(amount);
           await auth.refreshUser();
         }
         break;
@@ -265,9 +284,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           phoneNumber: _phoneController.text.trim(),
           operator: _nameController.text.trim(),
           amount: amount,
+          idempotencyKey: idempotencyKey,
         );
         if (success) {
-          auth.deductMoney(amount);
           await auth.refreshUser();
         }
         break;
@@ -278,9 +297,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           billType: _nameController.text.trim(),
           accountNumber: _accountController.text.trim(),
           amount: amount,
+          idempotencyKey: idempotencyKey,
         );
         if (success) {
-          auth.deductMoney(amount);
           await auth.refreshUser();
         }
         break;
@@ -290,16 +309,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
           userId: user.id!,
           merchantName: _nameController.text.trim(),
           amount: amount,
+          idempotencyKey: idempotencyKey,
           items: [],
         );
         if (success) {
-          auth.deductMoney(amount);
           await auth.refreshUser();
         }
         break;
     }
 
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     if (success) {
       final message = widget.paymentType == PaymentType.deposit
@@ -531,7 +551,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: paymentProvider.isLoading ? null : _handlePayment,
+                  // Disabled if the ViewModel is loading OR the UI is submitting
+                  onPressed: (paymentProvider.isLoading || _isSubmitting)
+                      ? null
+                      : _handlePayment,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: paymentProvider.getPaymentTypeColor(
                       widget.paymentType,
@@ -813,6 +836,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
       validator: (value) {
+        if (label == 'Card Number') {
+          final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+          if (digits.length < 13 || digits.length > 19) {
+            return 'Enter a valid card number (13-19 digits)';
+          }
+          return null;
+        }
+        if (label == 'CVC') {
+          final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+          if (digits.length < 3 || digits.length > 4) {
+            return 'Enter a valid CVC (3-4 digits)';
+          }
+          return null;
+        }
+        if (label == 'MM') {
+          final month = int.tryParse(value ?? '');
+          if (month == null || month < 1 || month > 12) {
+            return 'Enter a valid month (1-12)';
+          }
+          return null;
+        }
+        if (label == 'YY or YYYY') {
+          final year = int.tryParse(value ?? '');
+          final currentYear = DateTime.now().year;
+          if (year == null || (year < currentYear % 100 && year > 0 && year < 100) || (year >= 100 && year < currentYear)) {
+            return 'Enter a valid expiry year';
+          }
+          return null;
+        }
         if (value == null || value.trim().isEmpty) {
           return 'This field is required';
         }

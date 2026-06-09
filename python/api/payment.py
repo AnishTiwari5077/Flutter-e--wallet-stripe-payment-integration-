@@ -5,8 +5,8 @@ from api.db import db
 
 payment_bp = Blueprint('payment', __name__)
 
-# Stripe API Key
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "your stripe secret key")
+# Stripe API Key — raise loudly if missing, never fall back to a placeholder
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 
 # ---------------- PROCESS DEPOSIT (DIRECT CARD) ----------------
 @payment_bp.route("/process-deposit", methods=["POST"])
@@ -26,7 +26,7 @@ def process_deposit():
     amount_in_cents = int(amount * 100)
 
     try:
-        # Check idempotency first before calling Stripe
+        # 1. Check idempotency FIRST (close connection before charging Stripe)
         if idempotency_key:
             conn = db()
             cur = conn.cursor()
@@ -56,13 +56,13 @@ def process_deposit():
                 "cvc": cvc,
             }
 
-        # 1. Create PaymentMethod
+        # 2. Create PaymentMethod
         payment_method = stripe.PaymentMethod.create(
             type="card",
             card=card_param,  # type: ignore
         )
         
-        # 2. Create and confirm PaymentIntent without redirects
+        # 3. Create and confirm PaymentIntent without redirects
         intent_kwargs = {
             "amount": amount_in_cents,
             "currency": "usd",
@@ -76,14 +76,17 @@ def process_deposit():
         intent = stripe.PaymentIntent.create(**intent_kwargs)  # type: ignore
         
         if intent.status == "succeeded":
-            # 3. Update balance
+            # 4. Update balance — if this fails, Stripe already charged the card.
+            # We log the Stripe intent ID so the charge can be manually reconciled.
             conn = db()
             cur = conn.cursor()
             try:
                 cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, user_id))
                 cur.execute(
-                    "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'add',%s)",
-                    (None, user_id, amount, idempotency_key)
+                    """INSERT INTO transactions 
+                       (sender_id, receiver_id, amount, type, idempotency_key, reference_id) 
+                       VALUES (%s,%s,%s,'add',%s,%s)""",
+                    (None, user_id, amount, idempotency_key, intent.id)
                 )
                 conn.commit()
                 
@@ -93,7 +96,13 @@ def process_deposit():
                 return jsonify({"success": True, "message": "Deposit successful", "user": user}), 200
             except Exception as db_err:
                 conn.rollback()
-                raise db_err
+                # CRITICAL: Stripe was charged but DB update failed.
+                # The intent.id is needed to manually reconcile / issue refund.
+                print(f"🚨 CRITICAL: Stripe charged {intent.id} but DB update failed for user {user_id}: {db_err}")
+                return jsonify({
+                    "error": f"Payment recorded by Stripe but balance update failed. "
+                             f"Please contact support with reference: {intent.id}"
+                }), 500
             finally:
                 cur.close()
                 conn.close()

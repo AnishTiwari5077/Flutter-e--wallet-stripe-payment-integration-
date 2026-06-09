@@ -18,6 +18,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String expMonth,
     required String expYear,
     required String cvc,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.processDeposit(
@@ -27,6 +28,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         expMonth: expMonth,
         expYear: expYear,
         cvc: cvc,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -44,12 +46,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required int senderId,
     required String receiverPhone,
     required double amount,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.sendMoney(
         senderId: senderId,
         receiverPhone: receiverPhone,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -68,6 +72,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String accountNumber,
     required String bankName,
     required double amount,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.bankTransfer(
@@ -75,6 +80,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         accountNumber: accountNumber,
         bankName: bankName,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -94,6 +100,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String collegeName,
     required String semester,
     required double amount,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.collegePayment(
@@ -102,6 +109,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         collegeName: collegeName,
         semester: semester,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -120,6 +128,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String phoneNumber,
     required String operator,
     required double amount,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.mobileTopup(
@@ -127,6 +136,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         phoneNumber: phoneNumber,
         operator: operator,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -145,6 +155,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String billType,
     required String accountNumber,
     required double amount,
+    required String idempotencyKey,
   }) async {
     try {
       return await remoteDataSource.billPayment(
@@ -152,6 +163,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         billType: billType,
         accountNumber: accountNumber,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
     } on SocketException {
       throw const NetworkFailure('No internet connection. Please check your network and try again.');
@@ -169,6 +181,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required int userId,
     required String merchantName,
     required double amount,
+    required String idempotencyKey,
     List<Map<String, dynamic>>? items,
   }) async {
     try {
@@ -176,6 +189,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         userId: userId,
         merchantName: merchantName,
         amount: amount,
+        idempotencyKey: idempotencyKey,
         items: items,
       );
     } on SocketException {

@@ -32,10 +32,12 @@ class PaymentProvider with ChangeNotifier {
   });
 
   bool _isLoading = false;
+  bool _isProcessing = false; // Guard against concurrent payment requests
   String? _errorMessage;
   String? _successMessage;
 
   bool get isLoading => _isLoading;
+  bool get isProcessing => _isProcessing;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
 
@@ -46,7 +48,14 @@ class PaymentProvider with ChangeNotifier {
     required String expMonth,
     required String expYear,
     required String cvc,
+    required String idempotencyKey,
   }) async {
+    // Hard guard — reject if a payment is already in flight
+    if (_isProcessing) {
+      return {'success': false, 'message': 'A payment is already being processed. Please wait.'};
+    }
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -58,13 +67,12 @@ class PaymentProvider with ChangeNotifier {
         expMonth: expMonth,
         expYear: expYear,
         cvc: cvc,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'Deposit successful!';
       notifyListeners();
       return {'success': true, 'message': _successMessage, 'user': user};
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -72,6 +80,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return {'success': false, 'message': _errorMessage};
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -79,7 +90,11 @@ class PaymentProvider with ChangeNotifier {
     required int senderId,
     required String receiverPhone,
     required double amount,
+    required String idempotencyKey,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -88,13 +103,12 @@ class PaymentProvider with ChangeNotifier {
         senderId: senderId,
         receiverPhone: receiverPhone,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'Money sent successfully!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -102,6 +116,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -110,7 +127,11 @@ class PaymentProvider with ChangeNotifier {
     required String accountNumber,
     required String bankName,
     required double amount,
+    required String idempotencyKey,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -120,13 +141,12 @@ class PaymentProvider with ChangeNotifier {
         accountNumber: accountNumber,
         bankName: bankName,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'Bank transfer successful!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -134,6 +154,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -143,7 +166,11 @@ class PaymentProvider with ChangeNotifier {
     required String collegeName,
     required double amount,
     required String semester,
+    required String idempotencyKey,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -154,13 +181,12 @@ class PaymentProvider with ChangeNotifier {
         collegeName: collegeName,
         semester: semester,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'College payment successful!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -168,6 +194,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -176,7 +205,11 @@ class PaymentProvider with ChangeNotifier {
     required String phoneNumber,
     required String operator,
     required double amount,
+    required String idempotencyKey,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -186,13 +219,12 @@ class PaymentProvider with ChangeNotifier {
         phoneNumber: phoneNumber,
         operator: operator,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'Mobile topup successful!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -200,6 +232,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -208,7 +243,11 @@ class PaymentProvider with ChangeNotifier {
     required String billType,
     required String accountNumber,
     required double amount,
+    required String idempotencyKey,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -218,13 +257,12 @@ class PaymentProvider with ChangeNotifier {
         billType: billType,
         accountNumber: accountNumber,
         amount: amount,
+        idempotencyKey: idempotencyKey,
       );
-      _setLoading(false);
       _successMessage = 'Bill payment successful!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -232,6 +270,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 
@@ -239,8 +280,12 @@ class PaymentProvider with ChangeNotifier {
     required int userId,
     required String merchantName,
     required double amount,
+    required String idempotencyKey,
     required List<Map<String, dynamic>> items,
   }) async {
+    if (_isProcessing) return false;
+
+    _isProcessing = true;
     _setLoading(true);
     _clearMessages();
 
@@ -249,14 +294,13 @@ class PaymentProvider with ChangeNotifier {
         userId: userId,
         merchantName: merchantName,
         amount: amount,
+        idempotencyKey: idempotencyKey,
         items: items,
       );
-      _setLoading(false);
       _successMessage = 'Shopping payment successful!';
       notifyListeners();
       return true;
     } catch (e) {
-      _setLoading(false);
       if (e is Failure) {
         _errorMessage = e.message;
       } else {
@@ -264,6 +308,9 @@ class PaymentProvider with ChangeNotifier {
       }
       notifyListeners();
       return false;
+    } finally {
+      _isProcessing = false;
+      _setLoading(false);
     }
   }
 

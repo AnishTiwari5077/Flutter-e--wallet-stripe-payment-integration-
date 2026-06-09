@@ -8,12 +8,14 @@ abstract class PaymentRepository {
     required String expMonth,
     required String expYear,
     required String cvc,
+    required String idempotencyKey,
   });
 
   Future<bool> sendMoney({
     required int senderId,
     required String receiverPhone,
     required double amount,
+    required String idempotencyKey,
   });
 
   Future<bool> bankTransfer({
@@ -21,6 +23,7 @@ abstract class PaymentRepository {
     required String accountNumber,
     required String bankName,
     required double amount,
+    required String idempotencyKey,
   });
 
   Future<bool> collegePayment({
@@ -29,6 +32,7 @@ abstract class PaymentRepository {
     required String collegeName,
     required String semester,
     required double amount,
+    required String idempotencyKey,
   });
 
   Future<bool> mobileTopup({
@@ -36,6 +40,7 @@ abstract class PaymentRepository {
     required String phoneNumber,
     required String operator,
     required double amount,
+    required String idempotencyKey,
   });
 
   Future<bool> billPayment({
@@ -43,12 +48,14 @@ abstract class PaymentRepository {
     required String billType,
     required String accountNumber,
     required double amount,
+    required String idempotencyKey,
   });
 
   Future<bool> shoppingPayment({
     required int userId,
     required String merchantName,
     required double amount,
+    required String idempotencyKey,
     List<Map<String, dynamic>>? items,
   });
 }
