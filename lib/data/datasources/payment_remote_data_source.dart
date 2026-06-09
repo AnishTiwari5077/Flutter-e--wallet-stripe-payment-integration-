@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:app_wallet/core/network/api_client.dart';
 import 'package:app_wallet/data/models/user_model.dart';
 import 'package:app_wallet/core/error/failures.dart';
-import 'package:uuid/uuid.dart';
 
 abstract class PaymentRemoteDataSource {
   Future<UserModel> processDeposit({

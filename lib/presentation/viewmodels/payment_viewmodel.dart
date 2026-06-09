@@ -73,7 +73,11 @@ class PaymentProvider with ChangeNotifier {
       notifyListeners();
       return {'success': true, 'message': _successMessage, 'user': user};
     } catch (e) {
-      if (e is Failure) {
+      if (e is NetworkFailure) {
+        // Safe to retry — the same session key prevents double-charging.
+        _errorMessage = 'Network error. Your card may not have been charged. '
+            'You can safely tap retry — no double charge will occur.';
+      } else if (e is Failure) {
         _errorMessage = e.message;
       } else {
         _errorMessage = e.toString();

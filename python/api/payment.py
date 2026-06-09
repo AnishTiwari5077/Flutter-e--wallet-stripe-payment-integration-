@@ -19,31 +19,41 @@ def process_deposit():
     exp_year = data.get("exp_year")
     cvc = data.get("cvc")
     idempotency_key = request.headers.get("Idempotency-Key")
-    
+
     if amount <= 0 or not user_id or not card_number or not exp_month or not exp_year or not cvc:
         return jsonify({"error": "Invalid parameters"}), 400
-    
+
+    # Idempotency key is required — reject requests without it
+    if not idempotency_key:
+        return jsonify({"error": "Idempotency-Key header is required"}), 400
+
     amount_in_cents = int(amount * 100)
 
+    # STEP 1: Check idempotency in its own isolated block.
+    # The DB connection is closed BEFORE touching Stripe — no leaked connections.
     try:
-        # 1. Check idempotency FIRST (close connection before charging Stripe)
-        if idempotency_key:
-            conn = db()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
-                if cur.fetchone():
-                    cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
-                    user = cur.fetchone()
-                    return jsonify({"success": True, "message": "Deposit successful (Recovered)", "user": user}), 200
-            finally:
-                cur.close()
-                conn.close()
+        conn = db()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                # Already processed — return success without charging again
+                cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
+                user = cur.fetchone()
+                return jsonify({"success": True, "message": "Deposit successful (already processed)", "user": user}), 200
+        finally:
+            cur.close()
+            conn.close()
+    except Exception as check_err:
+        print(f"❌ Idempotency check error: {check_err}")
+        return jsonify({"error": "Server error during idempotency check"}), 500
 
-        # Check for Stripe test cards to bypass raw card data restriction
+    # STEP 2: Charge Stripe (only reached if key is genuinely new)
+    try:
+        # Map test cards to Stripe tokens to bypass raw card data restriction
         clean_card = card_number.replace(" ", "").replace("-", "")
         card_param = {}
-        
+
         if clean_card == "4242424242424242":
             card_param = {"token": "tok_visa"}
         elif clean_card.startswith("5555555555554444"):
@@ -56,48 +66,43 @@ def process_deposit():
                 "cvc": cvc,
             }
 
-        # 2. Create PaymentMethod
+        # Create PaymentMethod
         payment_method = stripe.PaymentMethod.create(
             type="card",
             card=card_param,  # type: ignore
         )
-        
-        # 3. Create and confirm PaymentIntent without redirects
-        intent_kwargs = {
-            "amount": amount_in_cents,
-            "currency": "usd",
-            "payment_method": payment_method.id,
-            "confirm": True,
-            "automatic_payment_methods": {"enabled": True, "allow_redirects": "never"}
-        }
-        if idempotency_key:
-            intent_kwargs["idempotency_key"] = idempotency_key
 
-        intent = stripe.PaymentIntent.create(**intent_kwargs)  # type: ignore
-        
+        # Create and confirm PaymentIntent — pass idempotency_key to Stripe too
+        intent = stripe.PaymentIntent.create(  # type: ignore
+            amount=amount_in_cents,
+            currency="usd",
+            payment_method=payment_method.id,
+            confirm=True,
+            automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
+            idempotency_key=idempotency_key,
+        )
+
         if intent.status == "succeeded":
-            # 4. Update balance — if this fails, Stripe already charged the card.
-            # We log the Stripe intent ID so the charge can be manually reconciled.
+            # STEP 3: Update DB — if this fails after Stripe charged, log for reconciliation
             conn = db()
             cur = conn.cursor()
             try:
                 cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, user_id))
                 cur.execute(
-                    """INSERT INTO transactions 
-                       (sender_id, receiver_id, amount, type, idempotency_key, reference_id) 
+                    """INSERT INTO transactions
+                       (sender_id, receiver_id, amount, type, idempotency_key, reference_id)
                        VALUES (%s,%s,%s,'add',%s,%s)""",
                     (None, user_id, amount, idempotency_key, intent.id)
                 )
                 conn.commit()
-                
+
                 cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
                 user = cur.fetchone()
-                
+
                 return jsonify({"success": True, "message": "Deposit successful", "user": user}), 200
             except Exception as db_err:
                 conn.rollback()
-                # CRITICAL: Stripe was charged but DB update failed.
-                # The intent.id is needed to manually reconcile / issue refund.
+                # CRITICAL: Stripe charged but DB failed — log intent.id for manual reconciliation
                 print(f"🚨 CRITICAL: Stripe charged {intent.id} but DB update failed for user {user_id}: {db_err}")
                 return jsonify({
                     "error": f"Payment recorded by Stripe but balance update failed. "
@@ -111,6 +116,9 @@ def process_deposit():
 
     except stripe.error.CardError as e:
         return jsonify({"error": e.user_message}), 400
+    except stripe.error.IdempotencyError:
+        # Stripe detected the same key was used with different params — treat as already processed
+        return jsonify({"success": True, "message": "Deposit already processed by Stripe"}), 200
     except Exception as e:
         print(f"❌ Process deposit error: {e}")
         return jsonify({"error": str(e)}), 500
