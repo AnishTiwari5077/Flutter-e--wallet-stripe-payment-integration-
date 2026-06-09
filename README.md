@@ -104,6 +104,260 @@ Client (Web/Mobile) ──> Flask REST API ──> Service Layer ──> MySQL
 
 ---
 
+## 📡 API Reference
+
+> Base URL: `http://<your-server-ip>:5000`
+> All request/response bodies use **JSON**. Endpoints that mutate state accept an optional `Idempotency-Key` header to prevent double-processing.
+
+---
+
+### 🔐 Auth
+
+#### `POST /register`
+Register a new user.
+
+**Request body:**
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "phone": "+1234567890",
+  "password": "secret123",
+  "avatar": ""
+}
+```
+**Response `201`:**
+```json
+{ "user": { "id": 1, "name": "John Doe", "email": "...", "phone": "...", "avatar": "", "balance": 0 }, "message": "User registered successfully!" }
+```
+
+---
+
+#### `POST /login`
+Authenticate a user and retrieve their profile.
+
+**Request body:**
+```json
+{ "email": "john@example.com", "password": "secret123" }
+```
+**Response `200`:**
+```json
+{ "user": { "id": 1, "name": "John Doe", "email": "...", "phone": "...", "avatar": "", "balance": 250.0 } }
+```
+
+---
+
+### 👤 User
+
+#### `GET /user/<id>`
+Fetch a user's profile and current balance.
+
+**Response `200`:**
+```json
+{ "id": 1, "name": "John Doe", "email": "...", "phone": "...", "avatar": "", "balance": 250.0 }
+```
+
+---
+
+#### `PUT /user/<id>`
+Update a user's name, phone, or avatar.
+
+**Request body** *(send only fields to update)*:
+```json
+{ "name": "Jane Doe", "phone": "+9876543210", "avatar": "<base64-string>" }
+```
+**Response `200`:**
+```json
+{ "success": true, "user": { ... }, "message": "Profile updated successfully" }
+```
+
+---
+
+### 💳 Payments
+
+> All payment endpoints accept an **`Idempotency-Key`** header (string UUID recommended). Requests with a previously seen key are safely replayed without double-charging.
+
+#### `POST /process-deposit`
+Charge a card via Stripe and credit the user's wallet. *(Test card: `4242 4242 4242 4242`)*
+
+**Headers:** `Idempotency-Key: <uuid>` *(required)*
+
+**Request body:**
+```json
+{
+  "user_id": 1,
+  "amount": 100.00,
+  "card_number": "4242424242424242",
+  "exp_month": 12,
+  "exp_year": 2026,
+  "cvc": "123"
+}
+```
+**Response `200`:**
+```json
+{ "success": true, "message": "Deposit successful", "user": { "balance": 350.0, ... } }
+```
+
+---
+
+#### `POST /create-payment-intent`
+Create a Stripe PaymentIntent and return a `clientSecret` for front-end confirmation.
+
+**Request body:**
+```json
+{ "amount": 50.00 }
+```
+**Response `200`:**
+```json
+{ "clientSecret": "pi_xxx_secret_xxx" }
+```
+
+---
+
+#### `POST /payment-success`
+Confirm a payment and update the user's balance after front-end Stripe confirmation.
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional but recommended)*
+
+**Request body:**
+```json
+{ "user_id": 1, "amount": 50.00 }
+```
+**Response `200`:**
+```json
+{ "message": "Balance updated", "user": { "balance": 300.0, ... } }
+```
+
+---
+
+#### `POST /send`
+Transfer money between two users (P2P, wallet-to-wallet).
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "sender_id": 1, "phone": "+9876543210", "amount": 150.00 }
+```
+**Response `200`:**
+```json
+{ "message": "Money sent successfully!" }
+```
+
+---
+
+#### `POST /bank-transfer`
+Withdraw funds from the wallet to an external bank account.
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "user_id": 1, "account_number": "9876543210", "bank_name": "Chase", "amount": 75.00 }
+```
+**Response `200`:**
+```json
+{ "message": "Bank transfer of $75.0 to Chase successful!" }
+```
+
+---
+
+#### `POST /college-payment`
+Pay institutional (college/university) fees from the wallet.
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "user_id": 1, "student_id": "STU001", "college_name": "MIT", "semester": "Fall 2026", "amount": 500.00 }
+```
+**Response `200`:**
+```json
+{ "message": "College payment of $500.0 for Fall 2026 successful!" }
+```
+
+---
+
+#### `POST /mobile-topup`
+Top-up a mobile number via a third-party operator.
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "user_id": 1, "phone_number": "+1234567890", "operator": "Verizon", "amount": 20.00 }
+```
+**Response `200`:**
+```json
+{ "message": "Mobile topup of $20.0 to +1234567890 successful!" }
+```
+
+---
+
+#### `POST /bill-payment`
+Pay utility or service bills (electricity, water, internet, etc.).
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "user_id": 1, "bill_type": "electricity", "account_number": "ACC123", "amount": 45.00 }
+```
+**Response `200`:**
+```json
+{ "message": "Electricity bill payment of $45.0 successful!" }
+```
+
+---
+
+#### `POST /shopping-payment`
+Pay a merchant for a shopping transaction.
+
+**Headers:** `Idempotency-Key: <uuid>` *(optional)*
+
+**Request body:**
+```json
+{ "user_id": 1, "merchant_name": "Amazon", "amount": 199.99 }
+```
+**Response `200`:**
+```json
+{ "message": "Payment of $199.99 to Amazon successful!" }
+```
+
+---
+
+### 🧾 Transactions
+
+#### `GET /transactions/`
+List all transactions across all users (with sender/receiver names and phones).
+
+**Response `200`:** Array of transaction objects.
+
+---
+
+#### `GET /transactions/<user_id>`
+List all transactions where the user is either the sender or receiver.
+
+**Response `200`:** Array of transaction objects:
+```json
+[
+  {
+    "transaction_id": 5,
+    "sender_id": 1,
+    "receiver_id": 2,
+    "amount": 150.0,
+    "type": "send",
+    "created_at": "2026-06-09T09:54:41",
+    "sender_name": "John Doe",
+    "sender_phone": "+1234567890",
+    "receiver_name": "Jane Doe",
+    "receiver_phone": "+9876543210"
+  }
+]
+```
+
+---
+
 ## 🤝 Contributing
 1. Follow PEP8 and use autoformatters (`black`).
 2. Write unit tests for new logic.
