@@ -11,8 +11,8 @@ import 'package:flutter/foundation.dart';
 class BiometricService {
   static final LocalAuthentication _localAuth = LocalAuthentication();
 
-  // Debug mode flag - set to false to disable all debug prints
-  static bool debugMode = true;
+  // Debug mode flag - automatically false in Release/Profile builds
+  static bool get debugMode => kDebugMode;
 
   // Configure secure storage with platform-specific options
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(

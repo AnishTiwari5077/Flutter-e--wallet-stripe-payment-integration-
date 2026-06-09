@@ -11,6 +11,7 @@ class DepositUseCase {
     required String expMonth,
     required String expYear,
     required String cvc,
+    required String idempotencyKey,
   }) => repository.processDeposit(
     userId: userId,
     amount: amount,
@@ -18,6 +19,7 @@ class DepositUseCase {
     expMonth: expMonth,
     expYear: expYear,
     cvc: cvc,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -28,10 +30,12 @@ class SendMoneyUseCase {
     required int senderId,
     required String receiverPhone,
     required double amount,
+    required String idempotencyKey,
   }) => repository.sendMoney(
     senderId: senderId,
     receiverPhone: receiverPhone,
     amount: amount,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -43,11 +47,13 @@ class BankTransferUseCase {
     required String accountNumber,
     required String bankName,
     required double amount,
+    required String idempotencyKey,
   }) => repository.bankTransfer(
     userId: userId,
     accountNumber: accountNumber,
     bankName: bankName,
     amount: amount,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -60,12 +66,14 @@ class CollegePaymentUseCase {
     required String collegeName,
     required String semester,
     required double amount,
+    required String idempotencyKey,
   }) => repository.collegePayment(
     userId: userId,
     studentId: studentId,
     collegeName: collegeName,
     semester: semester,
     amount: amount,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -77,11 +85,13 @@ class MobileTopupUseCase {
     required String phoneNumber,
     required String operator,
     required double amount,
+    required String idempotencyKey,
   }) => repository.mobileTopup(
     userId: userId,
     phoneNumber: phoneNumber,
     operator: operator,
     amount: amount,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -93,11 +103,13 @@ class BillPaymentUseCase {
     required String billType,
     required String accountNumber,
     required double amount,
+    required String idempotencyKey,
   }) => repository.billPayment(
     userId: userId,
     billType: billType,
     accountNumber: accountNumber,
     amount: amount,
+    idempotencyKey: idempotencyKey,
   );
 }
 
@@ -108,11 +120,13 @@ class ShoppingPaymentUseCase {
     required int userId,
     required String merchantName,
     required double amount,
+    required String idempotencyKey,
     List<Map<String, dynamic>>? items,
   }) => repository.shoppingPayment(
     userId: userId,
     merchantName: merchantName,
     amount: amount,
+    idempotencyKey: idempotencyKey,
     items: items,
   );
 }

@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 
 class ApiClient {
   static const String baseUrl = 'http://192.168.1.8:5000';
-  static bool debugMode = true;
+  static bool get debugMode => kDebugMode;
   static const Duration timeoutDuration = Duration(seconds: 30);
 
   static Map<String, String> getHeaders([Map<String, String>? extraHeaders]) {
