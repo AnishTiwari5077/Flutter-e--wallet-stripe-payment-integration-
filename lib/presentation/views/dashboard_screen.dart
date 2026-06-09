@@ -1,3 +1,4 @@
+import 'package:app_wallet/domain/entities/transaction_entity.dart';
 import 'package:app_wallet/presentation/views/security_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +8,6 @@ import 'package:app_wallet/presentation/viewmodels/transaction_viewmodel.dart';
 import 'package:app_wallet/presentation/widgets/neo_widget.dart';
 import 'package:app_wallet/presentation/views/payment_screen.dart';
 import 'package:app_wallet/presentation/views/transaction_history_screen.dart';
-import 'package:app_wallet/domain/entities/transaction_entity.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});

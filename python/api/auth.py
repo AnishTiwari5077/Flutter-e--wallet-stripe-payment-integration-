@@ -17,7 +17,7 @@ def register():
     if not name or not email or not password:
         return jsonify({"error": "Missing required fields"}), 400
     
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     conn = db()
     cur = conn.cursor()

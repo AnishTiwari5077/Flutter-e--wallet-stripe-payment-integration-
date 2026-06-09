@@ -18,6 +18,7 @@ def process_deposit():
     exp_month = data.get("exp_month")
     exp_year = data.get("exp_year")
     cvc = data.get("cvc")
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if amount <= 0 or not user_id or not card_number or not exp_month or not exp_year or not cvc:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -25,6 +26,20 @@ def process_deposit():
     amount_in_cents = int(amount * 100)
 
     try:
+        # Check idempotency first before calling Stripe
+        if idempotency_key:
+            conn = db()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+                if cur.fetchone():
+                    cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
+                    user = cur.fetchone()
+                    return jsonify({"success": True, "message": "Deposit successful (Recovered)", "user": user}), 200
+            finally:
+                cur.close()
+                conn.close()
+
         # Check for Stripe test cards to bypass raw card data restriction
         clean_card = card_number.replace(" ", "").replace("-", "")
         card_param = {}
@@ -44,17 +59,21 @@ def process_deposit():
         # 1. Create PaymentMethod
         payment_method = stripe.PaymentMethod.create(
             type="card",
-            card=card_param,
+            card=card_param,  # type: ignore
         )
         
         # 2. Create and confirm PaymentIntent without redirects
-        intent = stripe.PaymentIntent.create(
-            amount=amount_in_cents,
-            currency="usd",
-            payment_method=payment_method.id,
-            confirm=True,
-            automatic_payment_methods={"enabled": True, "allow_redirects": "never"}
-        )
+        intent_kwargs = {
+            "amount": amount_in_cents,
+            "currency": "usd",
+            "payment_method": payment_method.id,
+            "confirm": True,
+            "automatic_payment_methods": {"enabled": True, "allow_redirects": "never"}
+        }
+        if idempotency_key:
+            intent_kwargs["idempotency_key"] = idempotency_key
+
+        intent = stripe.PaymentIntent.create(**intent_kwargs)  # type: ignore
         
         if intent.status == "succeeded":
             # 3. Update balance
@@ -63,8 +82,8 @@ def process_deposit():
             try:
                 cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, user_id))
                 cur.execute(
-                    "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'add')",
-                    (None, user_id, amount)
+                    "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'add',%s)",
+                    (None, user_id, amount, idempotency_key)
                 )
                 conn.commit()
                 
@@ -115,6 +134,7 @@ def payment_success():
     data = request.json
     user_id = data.get("user_id")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or amount <= 0:
         return jsonify({"error": "Invalid user_id or amount"}), 400
@@ -122,13 +142,20 @@ def payment_success():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                cur.execute("SELECT id, name, email, phone, avatar, balance FROM users WHERE id=%s", (user_id,))
+                user = cur.fetchone()
+                return jsonify({"message": "Balance updated (Recovered)", "user": user}), 200
+
         # Atomically update user balance
         cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, user_id))
         
         # Record the transaction (type 'add' for wallet top-up)
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'add')",
-            (None, user_id, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'add',%s)",
+            (None, user_id, amount, idempotency_key)
         )
         conn.commit()
         
@@ -154,6 +181,7 @@ def send_money():
     sender_id = data.get("sender_id")
     phone = data.get("phone")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not sender_id or not phone or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -161,6 +189,11 @@ def send_money():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": "Money sent successfully! (Recovered)"}), 200
+
         # Find receiver by phone number
         cur.execute("SELECT id FROM users WHERE phone=%s", (phone,))
         receiver = cur.fetchone()
@@ -184,8 +217,8 @@ def send_money():
         cur.execute("UPDATE users SET balance = balance - %s WHERE id=%s", (amount, sender_id))
         cur.execute("UPDATE users SET balance = balance + %s WHERE id=%s", (amount, receiver_id))
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'send')",
-            (sender_id, receiver_id, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'send',%s)",
+            (sender_id, receiver_id, amount, idempotency_key)
         )
         conn.commit()
         
@@ -208,6 +241,7 @@ def bank_transfer():
     account_number = data.get("account_number")
     bank_name = data.get("bank_name")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or not account_number or not bank_name or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -215,6 +249,11 @@ def bank_transfer():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": f"Bank transfer of ${amount} to {bank_name} successful! (Recovered)"}), 200
+
         # Check balance
         cur.execute("SELECT balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
@@ -229,8 +268,8 @@ def bank_transfer():
         
         # Record transaction (receiver_id is NULL for external transfers)
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'bank_transfer')",
-            (user_id, None, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'bank_transfer',%s)",
+            (user_id, None, amount, idempotency_key)
         )
         conn.commit()
         
@@ -254,6 +293,7 @@ def college_payment():
     college_name = data.get("college_name")
     semester = data.get("semester")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or not student_id or not college_name or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -261,6 +301,11 @@ def college_payment():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": f"College payment of ${amount} for {semester} successful! (Recovered)"}), 200
+
         # Check balance
         cur.execute("SELECT balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
@@ -275,8 +320,8 @@ def college_payment():
         
         # Record transaction (receiver_id is NULL for external payments)
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'college_payment')",
-            (user_id, None, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'college_payment',%s)",
+            (user_id, None, amount, idempotency_key)
         )
         conn.commit()
         
@@ -299,6 +344,7 @@ def mobile_topup():
     phone_number = data.get("phone_number")
     operator = data.get("operator")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or not phone_number or not operator or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -306,6 +352,11 @@ def mobile_topup():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": f"Mobile topup of ${amount} to {phone_number} successful! (Recovered)"}), 200
+
         # Check balance
         cur.execute("SELECT balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
@@ -320,8 +371,8 @@ def mobile_topup():
         
         # Record transaction
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'mobile_topup')",
-            (user_id, None, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'mobile_topup',%s)",
+            (user_id, None, amount, idempotency_key)
         )
         conn.commit()
         
@@ -345,6 +396,7 @@ def bill_payment():
     bill_type = data.get("bill_type") # e.g., 'electricity', 'water', 'internet'
     account_number = data.get("account_number")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or not bill_type or not account_number or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -352,6 +404,11 @@ def bill_payment():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": f"{bill_type.capitalize()} bill payment of ${amount} successful! (Recovered)"}), 200
+
         # Check balance
         cur.execute("SELECT balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
@@ -366,8 +423,8 @@ def bill_payment():
         
         # Record transaction
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'bill_payment')",
-            (user_id, None, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'bill_payment',%s)",
+            (user_id, None, amount, idempotency_key)
         )
         conn.commit()
         
@@ -389,6 +446,7 @@ def shopping_payment():
     user_id = data.get("user_id")
     merchant_name = data.get("merchant_name")
     amount = float(data.get("amount", 0))
+    idempotency_key = request.headers.get("Idempotency-Key")
     
     if not user_id or not merchant_name or amount <= 0:
         return jsonify({"error": "Invalid parameters"}), 400
@@ -396,6 +454,11 @@ def shopping_payment():
     conn = db()
     cur = conn.cursor()
     try:
+        if idempotency_key:
+            cur.execute("SELECT id FROM transactions WHERE idempotency_key=%s", (idempotency_key,))
+            if cur.fetchone():
+                return jsonify({"message": f"Payment of ${amount} to {merchant_name} successful! (Recovered)"}), 200
+
         # Check balance
         cur.execute("SELECT balance FROM users WHERE id=%s", (user_id,))
         user = cur.fetchone()
@@ -410,8 +473,8 @@ def shopping_payment():
         
         # Record transaction
         cur.execute(
-            "INSERT INTO transactions (sender_id, receiver_id, amount, type) VALUES (%s,%s,%s,'shopping')",
-            (user_id, None, amount)
+            "INSERT INTO transactions (sender_id, receiver_id, amount, type, idempotency_key) VALUES (%s,%s,%s,'shopping',%s)",
+            (user_id, None, amount, idempotency_key)
         )
         conn.commit()
         
