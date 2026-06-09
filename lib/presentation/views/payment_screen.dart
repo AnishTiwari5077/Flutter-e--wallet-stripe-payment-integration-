@@ -38,8 +38,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   // UI guard: prevents double-tap while a payment is being processed
   bool _isSubmitting = false;
-  // Idempotency key generated ONCE before the confirmation dialog
-  String? _pendingIdempotencyKey;
+  // Generated ONCE when screen opens — survives network failures.
+  // Retrying after a timeout sends the same key → backend rejects duplicate.
+  // Only destroyed when user navigates away (screen disposed).
+  late final String _sessionIdempotencyKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionIdempotencyKey = const Uuid().v4();
+  }
 
   @override
   void dispose() {
@@ -183,9 +191,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    // Generate idempotency key ONCE before showing the confirmation dialog
-    _pendingIdempotencyKey = const Uuid().v4();
-
     // ============================================
     // ✅ STEP 2: SHOW CONFIRMATION DIALOG
     // ============================================
@@ -201,15 +206,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (confirmed != true) {
       if (!mounted) return;
-      _pendingIdempotencyKey = null;
       _showMessage('Transaction cancelled', isError: false);
       return;
     }
 
-    // Lock the UI — key was already generated before the dialog
     setState(() => _isSubmitting = true);
-    final idempotencyKey = _pendingIdempotencyKey!;
-    _pendingIdempotencyKey = null;
+    // Use the session-level key — same on every retry until screen is closed
+    final idempotencyKey = _sessionIdempotencyKey;
 
     // ✅ CAPTURE BALANCE BEFORE TRANSACTION
     final balanceBefore = user.balance;
